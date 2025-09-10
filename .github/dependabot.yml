@@ -79,6 +79,7 @@ updates:
       - "dependencies"
       - "security"
       - "docker"
+      - "docker-compose"
 
   # GitHub Actions dependencies
   - package-ecosystem: "github-actions"
@@ -112,36 +113,7 @@ updates:
       - "github-actions"
       - "ci"
 
-  # Docker Compose dependencies
-  - package-ecosystem: "docker"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "wednesday"
-      time: "06:00"
-      timezone: "UTC"
-    allow:
-      - dependency-type: "all"
-    groups:
-      compose-security:
-        applies-to: security-updates
-        patterns:
-          - "*"
-      compose-updates:
-        applies-to: version-updates
-        patterns:
-          - "*"
-    open-pull-requests-limit: 5
-    rebase-strategy: "auto"
-    commit-message:
-      prefix: "compose"
-      include: "scope"
-    reviewers:
-      - "ballsdex-team"
-    labels:
-      - "dependencies"
-      - "security"
-      - "docker-compose"
+
 
   # Admin panel Python dependencies (separate monitoring)
   - package-ecosystem: "pip"
