@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from discord import app_commands
 
 from ballsdex.packages.admin.cog import Admin
+from ballsdex.packages.admin.promocode import Promocode
 
 if TYPE_CHECKING:
     from ballsdex.core.bot import BallsDexBot
@@ -42,4 +43,6 @@ async def setup(bot: "BallsDexBot"):
     if command_count(n) > 3900:
         strip_descriptions(n)
         log.warn("/admin command too long, stripping descriptions.")
+    assert n.__cog_app_commands_group__
+    n.__cog_app_commands_group__.add_command(Promocode())
     await bot.add_cog(n)

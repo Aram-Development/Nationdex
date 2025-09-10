@@ -156,6 +156,7 @@ class BallSpawnView(View):
 
     async def on_timeout(self):
         self.catch_button.disabled = True
+        self.rarity_button.disabled = True
         if self.message:
             try:
                 await self.message.edit(view=self)
@@ -170,6 +171,26 @@ class BallSpawnView(View):
             await interaction.response.send_message("I was caught already!", ephemeral=True)
         else:
             await interaction.response.send_modal(CountryballNamePrompt(self))
+
+    @button(style=discord.ButtonStyle.primary, label="Check my rarity!")
+    async def rarity_button(self, interaction: discord.Interaction["BallsDexBot"], button: Button):
+        tier = None
+        for (low, high), name in self.rarity_tiers:
+            if low <= self.model.rarity <= high:
+                tier = name
+                break
+        if tier:
+            await interaction.response.send_message(
+                f"My rarity is `{self.model.rarity}` and my tier is `{tier}`!", ephemeral=True
+            )
+        else:
+            await interaction.response.send_message(
+                f"My rarity is `{self.model.rarity}`, but I don't have a tier assigned to it yet!",
+                ephemeral=True,
+            )
+
+    # Import rarity_tiers from the dedicated module
+    from ballsdex.packages.gapacks.rarity import rarity_tiers
 
     @classmethod
     async def from_existing(cls, bot: "BallsDexBot", ball_instance: BallInstance):

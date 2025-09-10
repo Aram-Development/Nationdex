@@ -37,3 +37,7 @@ media
 config.yml
 docker-compose.override.yml
 admin_panel/admin_panel/settings/production.py
+
+# json
+promocodes.json
+archived_promocodes.json
