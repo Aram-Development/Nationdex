@@ -187,6 +187,8 @@ idna = ">=2.8"
 sniffio = ">=1.1"
 
 [package.extras]
+doc = ["Sphinx (>=8.2,<9.0)", "packaging", "sphinx-autodoc-typehints (>=1.2.0)", "sphinx_rtd_theme"]
+test = ["anyio[trio]", "blockbuster (>=1.5.23)", "coverage[toml] (>=7)", "exceptiongroup (>=1.2.0)", "hypothesis (>=4.0)", "psutil (>=5.9)", "pytest (>=7.0)", "trustme", "truststore (>=0.9.1) ; python_version >= \"3.10\"", "uvloop (>=0.21) ; platform_python_implementation == \"CPython\" and platform_system != \"Windows\" and python_version < \"3.14\""]
 trio = ["trio (>=0.26.1)"]
 
 [[package]]
@@ -1049,6 +1051,11 @@ files = [
     {file = "filelock-3.19.1-py3-none-any.whl", hash = "sha256:d38e30481def20772f5baf097c122c3babc4fcdb7e14e57049eb9d88c6dc017d"},
     {file = "filelock-3.19.1.tar.gz", hash = "sha256:66eda1888b0171c998b35be2bcc0f6d75c388a7ce20c3f3f37aa8e96c2dddf58"},
 ]
+
+[package.extras]
+docs = ["furo (>=2024.8.6)", "sphinx (>=8.1.3)", "sphinx-autodoc-typehints (>=3)"]
+testing = ["covdefaults (>=2.3)", "coverage (>=7.6.10)", "diff-cover (>=9.2.1)", "pytest (>=8.3.4)", "pytest-asyncio (>=0.25.2)", "pytest-cov (>=6)", "pytest-mock (>=3.14)", "pytest-timeout (>=2.3.1)", "virtualenv (>=20.28.1)"]
+typing = ["typing-extensions (>=4.12.2) ; python_version < \"3.11\""]
 
 [[package]]
 name = "flake8"
@@ -2799,15 +2806,15 @@ psycopg = ["psycopg[binary,pool] (>=3.0.12,<4.0.0)"]
 
 [[package]]
 name = "types-psycopg2"
-version = "2.9.21.20250516"
+version = "2.9.21.20250809"
 description = "Typing stubs for psycopg2"
 optional = true
 python-versions = ">=3.9"
 groups = ["main"]
 markers = "extra == \"dev\""
 files = [
-    {file = "types_psycopg2-2.9.21.20250516-py3-none-any.whl", hash = "sha256:2a9212d1e5e507017b31486ce8147634d06b85d652769d7a2d91d53cb4edbd41"},
-    {file = "types_psycopg2-2.9.21.20250516.tar.gz", hash = "sha256:6721018279175cce10b9582202e2a2b4a0da667857ccf82a97691bdb5ecd610f"},
+    {file = "types_psycopg2-2.9.21.20250809-py3-none-any.whl", hash = "sha256:59b7b0ed56dcae9efae62b8373497274fc1a0484bdc5135cdacbe5a8f44e1d7b"},
+    {file = "types_psycopg2-2.9.21.20250809.tar.gz", hash = "sha256:b7c2cbdcf7c0bd16240f59ba694347329b0463e43398de69784ea4dee45f3c6d"},
 ]
 
 [[package]]
