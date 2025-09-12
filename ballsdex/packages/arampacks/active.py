@@ -35,6 +35,8 @@ log.setLevel(logging.INFO)
 
 # Path to save promocodes
 PROMOCODES_FILE_PATH = "json/promocodes.json"
+# Path to save archived (deleted/cleaned) promocodes
+PROMOCODES_ARCHIVE_FILE_PATH = "json/promocodes_archive.json"
 
 # Store active promocodes in memory
 # Format: code -> {expiry_date, uses_left, max_uses_per_user, rewards, used_by}
@@ -121,13 +123,28 @@ def save_promocodes_to_file() -> bool:
         # Prepare data for JSON serialization
         json_data = {}
         for code, data in ACTIVE_PROMOCODES.items():
-            json_data[code] = {
-                "expiry": data["expiry"].isoformat() if isinstance(data["expiry"], datetime) else data["expiry"],
-                "uses_left": data["uses_left"],
-                "max_uses_per_user": data["max_uses_per_user"],
-                "rewards": data["rewards"],
-                "used_by": list(data["used_by"]) if isinstance(data["used_by"], set) else data["used_by"]
+            expiry_val = data.get("expiry")
+            if isinstance(expiry_val, datetime):
+                expiry_serialized = expiry_val.isoformat()
+            else:
+                expiry_serialized = expiry_val
+            item = {
+                "expiry": expiry_serialized,
+                "uses_left": data.get("uses_left", 0),
+                "max_uses_per_user": data.get("max_uses_per_user", 1),
+                "rewards": data.get("rewards", {}),
+                "used_by": list(data.get("used_by", [])) if isinstance(data.get("used_by"), set) else data.get("used_by", []),
             }
+            # Optional metadata
+            if "created_at" in data:
+                item["created_at"] = data["created_at"].isoformat() if isinstance(data["created_at"], datetime) else data["created_at"]
+            if "description" in data:
+                item["description"] = data["description"]
+            if "is_hidden" in data:
+                item["is_hidden"] = data["is_hidden"]
+            if "created_by" in data:
+                item["created_by"] = data["created_by"]
+            json_data[code] = item
         
         # Write to temporary file first
         with open(temp_file_path, 'w', encoding='utf-8') as temp_file:
@@ -247,14 +264,32 @@ def load_promocodes_from_file() -> bool:
                 
                 # Convert used_by list back to set
                 used_by = set(data.get("used_by", []))
+
+                # Parse created_at if present
+                created_at = data.get("created_at")
+                if isinstance(created_at, str):
+                    try:
+                        created_at = datetime.fromisoformat(created_at)
+                    except ValueError:
+                        created_at = None
                 
-                ACTIVE_PROMOCODES[code] = {
+                entry = {
                     "expiry": expiry,
                     "uses_left": data.get("uses_left", 0),
                     "max_uses_per_user": data.get("max_uses_per_user", 1),
                     "rewards": data.get("rewards", {}),
-                    "used_by": used_by
+                    "used_by": used_by,
                 }
+                if created_at:
+                    entry["created_at"] = created_at
+                if "description" in data:
+                    entry["description"] = data["description"]
+                if "is_hidden" in data:
+                    entry["is_hidden"] = data["is_hidden"]
+                if "created_by" in data:
+                    entry["created_by"] = data["created_by"]
+
+                ACTIVE_PROMOCODES[code] = entry
             except Exception as e:
                 log.error(f"Error parsing promocode {code}: {e}")
                 continue
@@ -363,43 +398,88 @@ def mark_promocode_used(code: str, user_id: int) -> bool:
         log.exception(f"Error marking promocode as used: {e}")
         return False
 
-def get_active_promocodes(include_expired: bool = False) -> Dict[str, Dict[str, Any]]:
+def get_active_promocodes(
+    include_expired: bool = False,
+    include_depleted: bool = False,
+    include_hidden: bool = False,
+    sort_by: Optional[str] = None,
+) -> Dict[str, Dict[str, Any]]:
     """
-    Get all active promocodes
-    
+    Get promocodes with filtering and optional sorting.
+
     Parameters
     ----------
     include_expired : bool
         Whether to include expired promocodes
-        
+    include_depleted : bool
+        Whether to include promocodes with no uses left
+    include_hidden : bool
+        Whether to include hidden promocodes
+    sort_by : Optional[str]
+        One of "code", "expiry", "uses_left", "created_at" for sorting the results
+
     Returns
     -------
     Dict[str, Dict[str, Any]]
-        Dictionary of active promocodes
+        Dictionary of promocodes matching the filters. Order reflects the requested sort.
     """
     load_promocodes_from_file()
-    
-    if include_expired:
-        return ACTIVE_PROMOCODES.copy()
-    
-    # Filter out expired codes
+
     current_time = datetime.now(timezone.utc)
-    active_codes = {}
-    
+    results: Dict[str, Dict[str, Any]] = {}
+
     for code, data in ACTIVE_PROMOCODES.items():
         expiry = data.get("expiry")
-        if not expiry or current_time <= expiry:
-            # Also check if there are uses left
-            uses_left = data.get("uses_left", 0)
-            if uses_left > 0:
-                active_codes[code] = data.copy()
-    
-    return active_codes
+        if not include_expired and expiry and current_time > expiry:
+            continue
 
-def clean_expired_promocodes() -> int:
+        if not include_depleted and data.get("uses_left", 0) <= 0:
+            continue
+
+        if not include_hidden and data.get("is_hidden", False):
+            continue
+
+        results[code] = data.copy()
+
+    if sort_by:
+        def sort_key(item: tuple[str, Dict[str, Any]]):
+            k, v = item
+            if sort_by == "code":
+                return k
+            if sort_by == "expiry":
+                val = v.get("expiry")
+                if isinstance(val, str):
+                    try:
+                        val = datetime.fromisoformat(val)
+                    except ValueError:
+                        val = None
+                return val or datetime.max
+            if sort_by == "uses_left":
+                return v.get("uses_left", 0)
+            if sort_by == "created_at":
+                val = v.get("created_at")
+                if isinstance(val, str):
+                    try:
+                        val = datetime.fromisoformat(val)
+                    except ValueError:
+                        val = None
+                return val or datetime.min
+            return k
+
+        sorted_items = sorted(results.items(), key=sort_key)
+        results = {k: v for k, v in sorted_items}
+
+    return results
+
+def clean_expired_promocodes(archive: bool = True) -> int:
     """
-    Remove expired promocodes from memory and file
-    
+    Remove expired or depleted promocodes from memory and optionally archive them.
+
+    Parameters
+    ----------
+    archive : bool
+        Whether to archive cleaned promocodes instead of discarding them.
+
     Returns
     -------
     int
@@ -407,27 +487,37 @@ def clean_expired_promocodes() -> int:
     """
     try:
         current_time = datetime.now(timezone.utc)
-        expired_codes = []
-        
-        for code, data in ACTIVE_PROMOCODES.items():
+        expired_codes: List[str] = []
+
+        for code, data in list(ACTIVE_PROMOCODES.items()):
             expiry = data.get("expiry")
             uses_left = data.get("uses_left", 0)
-            
+
             # Mark as expired if past expiry date or no uses left
             if (expiry and current_time > expiry) or uses_left <= 0:
                 expired_codes.append(code)
-        
-        # Remove expired codes
+
+        archive_data: Dict[str, Any] = {}
+        if archive and expired_codes:
+            archive_data = _load_archive_data()
+
+        # Remove expired codes (and collect for archive)
         for code in expired_codes:
-            del ACTIVE_PROMOCODES[code]
-            log.info(f"Removed expired promocode: {code}")
-        
-        # Save to file if any were removed
+            data = ACTIVE_PROMOCODES.pop(code, None)
+            if data is not None and archive:
+                archive_data[code] = _serialize_promocode_entry(data)
+            log.info(f"Removed expired/depleted promocode: {code}")
+
+        # Save updated active list
         if expired_codes:
             save_promocodes_to_file()
-        
+
+        # Save archive if needed
+        if archive and expired_codes:
+            _save_archive_data(archive_data)
+
         return len(expired_codes)
-        
+
     except Exception as e:
         log.exception(f"Error cleaning expired promocodes: {e}")
         return 0
@@ -455,6 +545,187 @@ def get_promocode_rewards(code: str) -> Optional[Dict[str, Any]]:
         return None
     
     return promocode_data.get("rewards", {})
+
+# --- New helper and management functions ---
+
+def _serialize_promocode_entry(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Convert a promocode entry to a JSON-serializable dict, preserving metadata."""
+    expiry_val = data.get("expiry")
+    if isinstance(expiry_val, datetime):
+        expiry_serialized = expiry_val.isoformat()
+    else:
+        expiry_serialized = expiry_val
+    result: Dict[str, Any] = {
+        "expiry": expiry_serialized,
+        "uses_left": data.get("uses_left", 0),
+        "max_uses_per_user": data.get("max_uses_per_user", 1),
+        "rewards": data.get("rewards", {}),
+        "used_by": list(data.get("used_by", [])) if isinstance(data.get("used_by"), set) else data.get("used_by", []),
+    }
+    if "created_at" in data:
+        result["created_at"] = data["created_at"].isoformat() if isinstance(data["created_at"], datetime) else data["created_at"]
+    if "description" in data:
+        result["description"] = data["description"]
+    if "is_hidden" in data:
+        result["is_hidden"] = data["is_hidden"]
+    if "created_by" in data:
+        result["created_by"] = data["created_by"]
+    return result
+
+def _load_archive_data() -> Dict[str, Any]:
+    try:
+        if not os.path.exists(PROMOCODES_ARCHIVE_FILE_PATH):
+            return {}
+        with open(PROMOCODES_ARCHIVE_FILE_PATH, 'r', encoding='utf-8') as f:
+            return json.load(f) or {}
+    except Exception as e:
+        log.warning(f"Failed to load archive data: {e}")
+        return {}
+
+def _save_archive_data(data: Dict[str, Any]) -> bool:
+    lock_file = None
+    try:
+        # Ensure directory exists
+        directory = os.path.dirname(PROMOCODES_ARCHIVE_FILE_PATH)
+        os.makedirs(directory, exist_ok=True)
+
+        # Acquire lock
+        lock_file_path = f"{PROMOCODES_ARCHIVE_FILE_PATH}.lock"
+        lock_file = open(lock_file_path, 'w')
+        try:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        except Exception:
+            # Best effort; proceed without locking if not supported
+            pass
+
+        # Write to temp file then move
+        temp_path = f"{PROMOCODES_ARCHIVE_FILE_PATH}.tmp"
+        with open(temp_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+            f.flush()
+            os.fsync(f.fileno())
+
+        # On Windows remove existing before rename
+        if os.name == 'nt' and os.path.exists(PROMOCODES_ARCHIVE_FILE_PATH):
+            try:
+                os.remove(PROMOCODES_ARCHIVE_FILE_PATH)
+            except OSError:
+                pass
+
+        os.rename(temp_path, PROMOCODES_ARCHIVE_FILE_PATH)
+        return True
+    except Exception as e:
+        log.warning(f"Failed to save archive data: {e}")
+        return False
+    finally:
+        try:
+            temp_path = f"{PROMOCODES_ARCHIVE_FILE_PATH}.tmp"
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+        except Exception:
+            pass
+        if lock_file:
+            try:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+                lock_file.close()
+                lock_file_path = f"{PROMOCODES_ARCHIVE_FILE_PATH}.lock"
+                if os.path.exists(lock_file_path):
+                    os.remove(lock_file_path)
+            except Exception:
+                pass
+
+def create_promocode(
+    code: str,
+    uses: int,
+    expiry_date: datetime,
+    specific_ball_id: Optional[int] = None,
+    special_id: Optional[int] = None,
+    max_uses_per_user: int = 1,
+    description: str = "",
+    is_hidden: bool = False,
+    created_by: Optional[str] = None,
+) -> bool:
+    """Create a new promocode and persist it to file.
+
+    Returns True on success, False otherwise.
+    """
+    try:
+        if not code:
+            raise ValueError("Code cannot be empty")
+        code = code.strip().upper()
+        if code in ACTIVE_PROMOCODES:
+            raise ValueError("Code already exists")
+        if uses <= 0:
+            raise ValueError("Uses must be positive")
+        if not isinstance(expiry_date, datetime):
+            raise TypeError("expiry_date must be a datetime")
+
+        ACTIVE_PROMOCODES[code] = {
+            "expiry": expiry_date,
+            "uses_left": uses,
+            "max_uses_per_user": max_uses_per_user,
+            "rewards": {
+                "specific_ball": specific_ball_id,
+                "special": special_id,
+            },
+            "used_by": set(),
+            "created_at": datetime.now(timezone.utc),
+            "description": description or "",
+            "is_hidden": bool(is_hidden),
+            "created_by": created_by or "",
+        }
+
+        return save_promocodes_to_file()
+    except Exception as e:
+        log.exception(f"Error creating promocode {code}: {e}")
+        return False
+
+def update_promocode_uses(code: str, uses_to_add: int) -> Optional[int]:
+    """Update the uses_left of an existing promocode by adding uses_to_add (can be negative).
+
+    Returns the new uses_left, or None on failure.
+    """
+    try:
+        if not code:
+            return None
+        code = code.strip().upper()
+        if code not in ACTIVE_PROMOCODES:
+            return None
+        current = int(ACTIVE_PROMOCODES[code].get("uses_left", 0))
+        new_uses = max(0, current + int(uses_to_add))
+        ACTIVE_PROMOCODES[code]["uses_left"] = new_uses
+        if not save_promocodes_to_file():
+            return None
+        return new_uses
+    except Exception as e:
+        log.exception(f"Error updating uses for promocode {code}: {e}")
+        return None
+
+def delete_promocode(code: str, archive: bool = True) -> bool:
+    """Delete a promocode. If archive is True, move it to the archive file."""
+    try:
+        if not code:
+            return False
+        code = code.strip().upper()
+        if code not in ACTIVE_PROMOCODES:
+            return False
+
+        data = ACTIVE_PROMOCODES.pop(code)
+
+        # Save active list first
+        ok = save_promocodes_to_file()
+        if not ok:
+            return False
+
+        if archive:
+            archive_data = _load_archive_data()
+            archive_data[code] = _serialize_promocode_entry(data)
+            return _save_archive_data(archive_data)
+
+        return True
+    except Exception as e:
+        log.exception(f"Error deleting promocode {code}: {e}")
+        return False
 
 # Initialize promocodes on import
 try:

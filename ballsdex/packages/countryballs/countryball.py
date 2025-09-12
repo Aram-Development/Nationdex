@@ -190,7 +190,7 @@ class BallSpawnView(View):
             )
 
     # Import rarity_tiers from the dedicated module
-    from ballsdex.packages.gapacks.rarity import rarity_tiers
+    from ballsdex.packages.arampacks.rarity import rarity_tiers
 
     @classmethod
     async def from_existing(cls, bot: "BallsDexBot", ball_instance: BallInstance):
