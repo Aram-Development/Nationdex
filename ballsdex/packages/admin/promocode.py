@@ -9,7 +9,7 @@ from ballsdex.settings import settings
 from ballsdex.core.utils.paginator import FieldPageSource, Pages
 
 # Import the promocode active module
-from ballsdex.packages.promocode.active import (
+from ballsdex.packages.arampacks.active import (
     ACTIVE_PROMOCODES, save_promocodes_to_file, create_promocode,
     update_promocode_uses, delete_promocode, get_active_promocodes,
     load_promocodes_from_file, PROMOCODES_FILE_PATH, clean_expired_promocodes

@@ -1,6 +1,6 @@
 from typing import List, Tuple
 
-# Define rarity tiers that can be imported by both gaPacks and BallSpawnView
+# Define rarity tiers that can be imported by both AramPacks and BallSpawnView
 rarity_tiers: List[Tuple[Tuple[float, float], str]] = [
     ((0.5, 1.0), "Common 🟩"),
     ((0.1, 0.5), "Uncommon 🟦"),
