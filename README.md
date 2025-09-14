@@ -60,6 +60,27 @@ Check out our [Contribution Guide](CONTRIBUTING.md) to get started!
 
 ---
 
+## 🚀 Development with uv
+
+This project now uses [uv](https://docs.astral.sh/uv/) for fast dependency management and Docker builds.
+
+- Local development
+  - Install uv (see official docs) and then:
+    - `uv sync` to create a virtual environment and install dependencies.
+    - `uv run python -m ballsdex` to start the bot locally.
+    - `uv run uvicorn admin_panel.asgi:application --host 0.0.0.0 --port 8000` to run the admin panel.
+
+- Docker
+  - The Docker image uses the uv base image and installs dependencies via uv for speed and reproducibility.
+  - Use `docker compose up --build` to build and run the full stack.
+
+Notes:
+- Configuration uses `config.toml` at the repository root.
+- The admin panel reads TOML via `ballsdex.settings.read_settings`.
+- For production, set `DJANGO_SECRET_KEY` and configure `DJANGO_ALLOWED_HOSTS`.
+
+---
+
 ## ⚖️ License
 
 This project is released under the [MIT License](https://opensource.org/licenses/MIT).

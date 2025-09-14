@@ -4,25 +4,28 @@
 # That file will not be tracked by git
 
 from pathlib import Path
+import os
+from urllib.parse import urlparse
 
 import dj_database_url
 
 from ballsdex.settings import read_settings, settings
 
 try:
-    read_settings(Path("../config.yml"))
+    read_settings(Path("../config.toml"))
 except FileNotFoundError:
     from rich import print
 
     print(
-        "[yellow][bold]Could not find ../config.yml file.[/bold] "
+        "[yellow][bold]Could not find ../config.toml file.[/bold] "
         "Please run the bot once to generate this file.[/yellow]"
     )
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-SECRET_KEY = None
+# Read Django secret key from environment if provided (recommended in production)
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY") or None
 
 # WARNING: DO NOT ADD EXTERNAL HOSTS HERE!!
 # If you want to expose your admin panel online, please follow this tutorial:
@@ -33,9 +36,38 @@ ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
 ]
+# Extend allowed hosts from config.toml (admin-panel.url) and env var DJANGO_ALLOWED_HOSTS
+_extra_hosts: list[str] = []
+if settings.admin_url:
+    try:
+        _parsed = urlparse(settings.admin_url)
+        if _parsed.hostname:
+            _extra_hosts.append(_parsed.hostname)
+    except Exception:
+        pass
+env_hosts = os.getenv("DJANGO_ALLOWED_HOSTS")
+if env_hosts:
+    _extra_hosts.extend([h.strip() for h in env_hosts.split(",") if h.strip()])
+if _extra_hosts:
+    # keep order but de-duplicate
+    for _h in _extra_hosts:
+        if _h not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(_h)
 INTERNAL_IPS = [
     "127.0.0.1",
 ]
+
+# CSRF trusted origins for reverse proxies and HTTPS
+CSRF_TRUSTED_ORIGINS = []
+for _h in ALLOWED_HOSTS:
+    if ":" in _h:
+        # likely an IPv6 or host:port; Django expects scheme+host without port
+        host_only = _h.split(":")[0]
+    else:
+        host_only = _h
+    if host_only:
+        CSRF_TRUSTED_ORIGINS.append(f"https://{host_only}")
+        CSRF_TRUSTED_ORIGINS.append(f"http://{host_only}")
 
 
 # Application definition

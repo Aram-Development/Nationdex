@@ -19,19 +19,14 @@ jobs:
         with:
           path: ~/.cache/pre-commit
           key: pre-commit|${{ env.pythonLocation }}|${{ hashFiles('.pre-commit-config.yaml') }}
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/pypoetry
-          key: poetry-${{ hashFiles('poetry.lock') }}
-      - name: Install Poetry
+      - name: Install uv
         run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-          echo "$HOME/.poetry/bin" >> $GITHUB_PATH
-      - name: Check poetry dependenciess
-        run: poetry check
-      - name: Install dependencies
-        run: poetry install --extras dev --no-interaction
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: Install dev tools
+        run: |
+          uv pip install --system black flake8 isort pyright pre-commit
       - name: Run black
-        run: poetry run black --check --diff $(git ls-files "*.py")
+        run: black --check --diff $(git ls-files "*.py")
       - name: Run pre-commit checks
-        run: poetry run pre-commit run -a
+        run: pre-commit run -a

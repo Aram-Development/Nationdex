@@ -7,7 +7,7 @@ authors = [
 ]
 license = "MIT"
 requires-python = ">=3.13, <3.14"
-dynamic = ["version"]
+version = "2.29.3"
 dependencies = [
     # asyncio
     "uvloop==0.21.0; sys_platform != 'win32'",
@@ -39,9 +39,10 @@ dependencies = [
     "rich==14.0.0",
     "python-dateutil==2.9.0",
     "Pillow==11.3.0",
-    "pyyaml==6.0.2",
     "cachetools==6.1.0",
-    "sentry-sdk[asyncpg]==2.33.0"
+    "sentry-sdk[asyncpg]==2.33.0",
+    # Provide audioop backport for Python 3.13 (stdlib audioop removed)
+    "audioop-lts>=0.2; python_version >= '3.13'",
 ]
 
 [project.optional-dependencies]
@@ -57,25 +58,9 @@ dev = [
     "django-types==0.20.0",
 ]
 
-[tool.poetry]
-packages = [{ include = "ballsdex" }]
-requires-poetry = ">=2.0"
-version = "0.0.0"
-
-[tool.poetry.requires-plugins]
-poetry-plugin-shell = ">=1.0"
-poetry-dynamic-versioning = { version = ">=1.0.0,<2.0.0", extras = ["plugin"] }
-
-[tool.poetry-dynamic-versioning]
-enable = true
-
-[tool.poetry-dynamic-versioning.from-file]
-source = "ballsdex/__init__.py"
-pattern = '__version__ = "(?P<base>\d+\.\d+\.\d+)"'
-
 [build-system]
-requires = ["poetry-core>=2.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
 
 [tool.black]
 line-length = 99

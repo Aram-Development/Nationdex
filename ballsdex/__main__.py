@@ -16,7 +16,7 @@ from discord.ext.commands import when_mentioned_or
 from rich import print
 from sentry_sdk.integrations.asyncio import AsyncioIntegration
 from tortoise import Tortoise
-from yaml import YAMLError
+from tomllib import TOMLDecodeError
 
 from ballsdex import __version__ as bot_version
 from ballsdex.core.bot import BallsDexBot
@@ -55,7 +55,7 @@ def parse_cli_flags(arguments: list[str]) -> CLIFlags:
     )
     parser.add_argument("--version", "-V", action="store_true", help="Display the bot's version")
     parser.add_argument(
-        "--config-file", type=Path, help="Set the path to config.yml", default=Path("./config.yml")
+        "--config-file", type=Path, help="Set the path to config.toml", default=Path("./config.toml")
     )
     parser.add_argument(
         "--reset-settings",
@@ -274,9 +274,9 @@ def main():
 
     try:
         read_settings(cli_flags.config_file)
-    except YAMLError:
+    except TOMLDecodeError:
         print(
-            "[red]Your YAML is invalid!\nError parsing config file, please check your config"
+            "[red]Your TOML is invalid!\nError parsing config file, please check your config"
             " and try again[/red]"
         )
         time.sleep(1)
@@ -301,7 +301,7 @@ def main():
         token = settings.bot_token
         if not token:
             log.error("Token not found!")
-            print("[red]You must provide a token inside the config.yml file.[/red]")
+            print("[red]You must provide a token inside the config.toml file.[/red]")
             time.sleep(1)
             sys.exit(0)
 

@@ -49,7 +49,7 @@ from ballsdex.core.models import (
 # 3. You may change the shiny buffs below to suit your dex better it's defaulted at 1000 HP & ATK Bonus
 # 4. Please report all bugs to user @moofficial on discord
 # 5. Make sure to add "boss" to PACKAGES at ballsdex/core/bot.py (if old bd version)
-#    OR add balldex.packages.boss to config.yml (if new bd version)
+#    OR add balldex.packages.boss to config.toml (if new bd version)
 # 6. Finally, add the boss folder to ballsdex/packages folder
 
 # HOW TO PLAY

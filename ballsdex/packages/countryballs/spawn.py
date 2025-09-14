@@ -23,7 +23,7 @@ CachedMessage = namedtuple("CachedMessage", ["content", "author_id"])
 class BaseSpawnManager:
     """
     A class instancied on cog load that will include the logic determining when a countryball
-    should be spawned. You can implement your own version and configure it in config.yml.
+    should be spawned. You can implement your own version and configure it in config.toml.
 
     Be careful with optimization and memory footprint, this will be called very often and should
     not slow down the bot or cause memory leaks.

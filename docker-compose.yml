@@ -37,8 +37,14 @@ services:
       - internal
     environment:
       - *postgres-url
-      # if serving the admin panel online, copy the file "production.example.py" and uncomment
-      - DJANGO_SETTINGS_MODULE=admin_panel.settings.production
+      # Use production_base by default (DEBUG off, sane defaults for local dev)
+      # If serving the admin panel online, create production.py from production.example.py
+      # and change this to admin_panel.settings.production
+      - DJANGO_SETTINGS_MODULE=admin_panel.settings.production_base
+      # Comma-separated list of allowed hosts for Django
+      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,nationdex.arielaram.xyz}
+      # SECRET_KEY for Django sessions/cookies (override in .env for production!)
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-dev-insecure-secret-change-me}
     depends_on:
       migration:
         condition: service_completed_successfully
@@ -115,7 +121,8 @@ services:
       - HEALTHCHECK_PORT=3928
 
   # Uncomment to enable gateway proxy feature and
-  # add "gateway-url: ws://gateway_proxy:5421" to your config.yaml
+  # add the following to your config.toml (TOML syntax):
+  # gateway-url = "ws://gateway_proxy:5421"
   # Also change tag corresponding to your platform if not x86-64
   #
   # gateway-proxy:

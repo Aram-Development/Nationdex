@@ -131,9 +131,9 @@ class BallSpawnView(View):
         Force the spawned countryball to have a special event attached. If None, a random one will
         be picked.
     atk_bonus: int | None
-        Force a specific attack bonus if set, otherwise random range defined in config.yml.
+        Force a specific attack bonus if set, otherwise random range defined in config.toml.
     hp_bonus: int | None
-        Force a specific health bonus if set, otherwise random range defined in config.yml.
+        Force a specific health bonus if set, otherwise random range defined in config.toml.
     """
 
     def __init__(self, bot: "BallsDexBot", model: Ball):

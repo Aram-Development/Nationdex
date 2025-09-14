@@ -6,7 +6,7 @@ version: 2
 
 # Configure update schedules and security monitoring for all ecosystems
 updates:
-  # Python dependencies (Poetry/pip ecosystem)
+  # Python dependencies (pip/uv ecosystem)
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
@@ -174,7 +174,7 @@ updates:
 # 4. All dependency updates: Scheduled based on ecosystem
 
 # Monitoring coverage:
-# - Python: pyproject.toml, poetry.lock, requirements files
+# - Python: pyproject.toml, uv.lock, requirements files
 # - Docker: Dockerfile, docker-compose.yml
 # - GitHub Actions: .github/workflows/*.yml
 # - Pre-commit hooks: .pre-commit-config.yaml

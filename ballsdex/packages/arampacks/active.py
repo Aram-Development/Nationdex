@@ -4,8 +4,10 @@ import os
 import random
 import time
 import fcntl
+from threading import RLock
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, Optional, Set, List, Union
+from ballsdex.settings import settings
 
 # Create a custom logger that logs to a dedicated file and console, but not to ballsdex.log
 log = logging.getLogger("ballsdex.packages.arampacks.active")
@@ -59,11 +61,15 @@ ACTIVE_PROMOCODES: Dict[str, Dict[str, Any]] = {
 # File lock timeout in seconds
 FILE_LOCK_TIMEOUT = 5
 
-# Cache expiry in seconds (5 minutes)
-CACHE_EXPIRY = 300
+# Cache expiry in seconds (settings-configurable)
+CACHE_EXPIRY = int(getattr(settings, "arampacks_cache_expiry", 300) or 300)
 
-# Last time the promocodes were loaded from file
-LAST_LOAD_TIME = 0
+# In-process concurrency guard for ACTIVE_PROMOCODES
+MEM_LOCK: RLock = RLock()
+
+# Last time we loaded from disk and last observed file mtime
+LAST_LOAD_TIME = 0.0
+LAST_FILE_MTIME = 0.0
 
 def save_promocodes_to_file() -> bool:
     """
@@ -174,6 +180,12 @@ def save_promocodes_to_file() -> bool:
                     return False
             
             os.rename(temp_file_path, PROMOCODES_FILE_PATH)
+            # update last observed file mtime
+            try:
+                global LAST_FILE_MTIME
+                LAST_FILE_MTIME = os.path.getmtime(PROMOCODES_FILE_PATH)
+            except Exception:
+                pass
             log.info(f"Successfully saved {len(ACTIVE_PROMOCODES)} promocodes to {PROMOCODES_FILE_PATH}")
             return True
             
@@ -220,7 +232,7 @@ def load_promocodes_from_file() -> bool:
     bool
         True if loaded successfully, False otherwise
     """
-    global LAST_LOAD_TIME, ACTIVE_PROMOCODES
+    global LAST_LOAD_TIME, LAST_FILE_MTIME, ACTIVE_PROMOCODES
     
     try:
         # Check if we should reload based on cache expiry
@@ -237,8 +249,8 @@ def load_promocodes_from_file() -> bool:
         # Check if file has been modified since last load
         try:
             file_mtime = os.path.getmtime(PROMOCODES_FILE_PATH)
-            if file_mtime <= LAST_LOAD_TIME:
-                log.debug(f"File not modified since last load, using cached data")
+            if LAST_FILE_MTIME and file_mtime <= LAST_FILE_MTIME:
+                log.debug("File not modified since last load, using cached data")
                 return True
         except OSError as e:
             log.warning(f"Could not get file modification time: {e}")
@@ -295,6 +307,10 @@ def load_promocodes_from_file() -> bool:
                 continue
         
         LAST_LOAD_TIME = current_time
+        try:
+            LAST_FILE_MTIME = os.path.getmtime(PROMOCODES_FILE_PATH)
+        except Exception:
+            pass
         log.info(f"Loaded {len(ACTIVE_PROMOCODES)} promocodes from {PROMOCODES_FILE_PATH}")
         return True
         
@@ -326,10 +342,10 @@ def is_valid_promocode(code: str, user_id: int) -> tuple[bool, str]:
     
     code = code.upper().strip()
     
-    if code not in ACTIVE_PROMOCODES:
-        return False, "❌ Invalid promocode. Please check your code and try again."
-    
-    promocode_data = ACTIVE_PROMOCODES[code]
+    with MEM_LOCK:
+        if code not in ACTIVE_PROMOCODES:
+            return False, "❌ Invalid promocode. Please check your code and try again."
+        promocode_data = ACTIVE_PROMOCODES[code]
     
     # Check if expired
     expiry = promocode_data.get("expiry")
@@ -370,20 +386,21 @@ def mark_promocode_used(code: str, user_id: int) -> bool:
     try:
         code = code.upper().strip()
         
-        if code not in ACTIVE_PROMOCODES:
-            log.error(f"Attempted to mark unknown promocode as used: {code}")
-            return False
-        
-        promocode_data = ACTIVE_PROMOCODES[code]
-        
-        # Add user to used_by set
-        if "used_by" not in promocode_data:
-            promocode_data["used_by"] = set()
-        promocode_data["used_by"].add(user_id)
-        
-        # Decrease uses_left
-        if promocode_data.get("uses_left", 0) > 0:
-            promocode_data["uses_left"] -= 1
+        with MEM_LOCK:
+            if code not in ACTIVE_PROMOCODES:
+                log.error(f"Attempted to mark unknown promocode as used: {code}")
+                return False
+
+            promocode_data = ACTIVE_PROMOCODES[code]
+
+            # Add user to used_by set
+            if "used_by" not in promocode_data:
+                promocode_data["used_by"] = set()
+            promocode_data["used_by"].add(user_id)
+
+            # Decrease uses_left
+            if promocode_data.get("uses_left", 0) > 0:
+                promocode_data["uses_left"] -= 1
         
         # Save to file
         success = save_promocodes_to_file()
@@ -539,7 +556,8 @@ def get_promocode_rewards(code: str) -> Optional[Dict[str, Any]]:
     load_promocodes_from_file()
     
     code = code.upper().strip()
-    promocode_data = ACTIVE_PROMOCODES.get(code)
+    with MEM_LOCK:
+        promocode_data = ACTIVE_PROMOCODES.get(code)
     
     if not promocode_data:
         return None
@@ -733,3 +751,12 @@ try:
     log.info(f"AramPacks promocode system initialized with {len(ACTIVE_PROMOCODES)} codes")
 except Exception as e:
     log.error(f"Failed to initialize promocode system: {e}")
+
+
+def reload_promocodes(force: bool = False) -> bool:
+    """Force reload promocodes from disk, bypassing cache when force=True."""
+    global LAST_LOAD_TIME, LAST_FILE_MTIME
+    if force:
+        LAST_LOAD_TIME = 0.0
+        LAST_FILE_MTIME = 0.0
+    return load_promocodes_from_file()
