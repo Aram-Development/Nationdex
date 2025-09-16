@@ -40,7 +40,7 @@ dependencies = [
     "python-dateutil==2.9.0.post0",
     "Pillow==11.3.0",
     "cachetools==6.2.0",
-    "sentry-sdk[asyncpg]==2.37.1",
+    "sentry-sdk[asyncpg]==2.38.0",
     # Provide audioop backport for Python 3.13 (stdlib audioop removed)
     "audioop-lts>=0.2; python_version >= '3.13'",
 ]
