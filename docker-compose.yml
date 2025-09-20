@@ -40,11 +40,11 @@ services:
       # Use production_base by default (DEBUG off, sane defaults for local dev)
       # If serving the admin panel online, create production.py from production.example.py
       # and change this to admin_panel.settings.production
-      - DJANGO_SETTINGS_MODULE=admin_panel.settings.production_base
+      # - DJANGO_SETTINGS_MODULE=admin_panel.settings.production_base
       # Comma-separated list of allowed hosts for Django
-      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,nationdex.arielaram.xyz}
+      # - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-nationdex.xyz}
       # SECRET_KEY for Django sessions/cookies (override in .env for production!)
-      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-dev-insecure-secret-change-me}
+      # - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-dev-insecure-secret-change-me}
     depends_on:
       migration:
         condition: service_completed_successfully
