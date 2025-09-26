@@ -20,7 +20,7 @@ dependencies = [
     "tortoise-cli==0.2.0",
 
     # django admin panel
-    "uvicorn[standard]==0.35.0",
+    "uvicorn[standard]==0.37.0",
     "django==5.2.6",
     "django-allow-cidr (>=0.7.1,<0.9.0)",
     "django-nonrelated-inlines==0.2",
@@ -40,7 +40,7 @@ dependencies = [
     "python-dateutil==2.9.0.post0",
     "Pillow==11.3.0",
     "cachetools==6.2.0",
-    "sentry-sdk[asyncpg]==2.38.0",
+    "sentry-sdk[asyncpg]==2.39.0",
     # Provide audioop backport for Python 3.13 (stdlib audioop removed)
     "audioop-lts>=0.2; python_version >= '3.13'",
 ]
