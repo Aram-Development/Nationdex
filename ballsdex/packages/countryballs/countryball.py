@@ -32,6 +32,21 @@ if TYPE_CHECKING:
 log = logging.getLogger("ballsdex.packages.countryballs")
 
 
+def _build_message(base_templates: list[str], ptbr_templates: list[str], **kwargs) -> str:
+    """
+    Pick a random base template, format it, and if a PT-BR template exists,
+    append it on the next line prefixed with "-# ( ... )".
+
+    Example output:
+    "A wild countryball appeared!\n-# (Uma countryball selvagem apareceu!)"
+    """
+    base = random.choice(base_templates).format(**kwargs)
+    if ptbr_templates:
+        ptbr = random.choice(ptbr_templates).format(**kwargs)
+        return f"{base}\n-# ({ptbr})"
+    return base
+
+
 class CountryballNamePrompt(Modal, title=f"Catch this {settings.collectible_name}!"):
     name = TextInput(
         label=f"Name of this {settings.collectible_name}",
@@ -61,7 +76,9 @@ class CountryballNamePrompt(Modal, title=f"Catch this {settings.collectible_name
 
         player, _ = await Player.get_or_create(discord_id=interaction.user.id)
         if self.view.caught:
-            slow_message = random.choice(settings.slow_messages).format(
+            slow_message = _build_message(
+                settings.slow_messages,
+                settings.slow_messages_ptbr,
                 user=interaction.user.mention,
                 collectible=settings.collectible_name,
                 ball=self.view.name,
@@ -81,7 +98,9 @@ class CountryballNamePrompt(Modal, title=f"Catch this {settings.collectible_name
             else:
                 wrong_name = self.name.value
 
-            wrong_message = random.choice(settings.wrong_messages).format(
+            wrong_message = _build_message(
+                settings.wrong_messages,
+                settings.wrong_messages_ptbr,
                 user=interaction.user.mention,
                 collectible=settings.collectible_name,
                 ball=self.view.name,
@@ -281,7 +300,9 @@ class BallSpawnView(View):
         try:
             permissions = channel.permissions_for(channel.guild.me)
             if permissions.attach_files and permissions.send_messages:
-                spawn_message = random.choice(settings.spawn_messages).format(
+                spawn_message = _build_message(
+                    settings.spawn_messages,
+                    settings.spawn_messages_ptbr,
                     collectible=settings.collectible_name,
                     ball=self.name,
                     collectibles=settings.plural_collectible_name,
@@ -450,15 +471,14 @@ class BallSpawnView(View):
         if self.ballinstance:
             text += f"This {settings.collectible_name} was dropped by <@{self.og_id}>\n"
 
-        caught_message = (
-            random.choice(settings.caught_messages).format(
-                user=mention,
-                collectible=settings.collectible_name,
-                ball=self.name,
-                collectibles=settings.plural_collectible_name,
-            )
-            + " "
-        )
+        caught_message = _build_message(
+            settings.caught_messages,
+            settings.caught_messages_ptbr,
+            user=mention,
+            collectible=settings.collectible_name,
+            ball=self.name,
+            collectibles=settings.plural_collectible_name,
+        ) + " "
 
         return (
             caught_message

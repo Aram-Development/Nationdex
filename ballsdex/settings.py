@@ -142,6 +142,12 @@ class Settings:
 
     catch_button_label: str = "Catch me!"
 
+    # Optional PT-BR translations appended under default messages
+    caught_messages_ptbr: list[str] = field(default_factory=list)
+    wrong_messages_ptbr: list[str] = field(default_factory=list)
+    spawn_messages_ptbr: list[str] = field(default_factory=list)
+    slow_messages_ptbr: list[str] = field(default_factory=list)
+
 
 settings = Settings()
 
@@ -246,6 +252,12 @@ def read_settings(path: "Path"):
             "{user} Sorry, this {collectible} was caught already!"
         ]
         settings.catch_button_label = catch.get("catch_button_label", "Catch me!")
+
+        # Read optional PT-BR message variants
+        settings.spawn_messages_ptbr = catch.get("spawn_msgs_ptbr") or []
+        settings.caught_messages_ptbr = catch.get("caught_msgs_ptbr") or []
+        settings.wrong_messages_ptbr = catch.get("wrong_msgs_ptbr") or []
+        settings.slow_messages_ptbr = catch.get("slow_msgs_ptbr") or []
 
     # avoids signaling needed migrations
     if "makemigrations" in sys.argv:
@@ -387,6 +399,21 @@ wrong_msgs = [
 spawn_msgs = [
   "A wild {collectible} appeared!",
 ]
+
+# (Optional) Brazilian Portuguese translations appended below the default messages
+# Uncomment and customize to enable
+#caught_msgs_ptbr = [
+#  "{user} Você capturou **{ball}**!",
+#]
+#wrong_msgs_ptbr = [
+#  "{user} Nome errado!",
+#]
+#spawn_msgs_ptbr = [
+#  "Uma {collectible} selvagem apareceu!",
+#]
+#slow_msgs_ptbr = [
+#  "{user} Desculpe, esta {collectible} já foi capturada!",
+#]
 
 # The message that appears when a user is too slow to catch a ball
 slow_msgs = [
