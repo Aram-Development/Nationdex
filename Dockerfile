@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7-labs
 
-FROM python:3.13.2-alpine3.21 AS base
+FROM ghcr.io/astral-sh/uv:python3.13-alpine AS base
 
 ENV PYTHONFAULTHANDLER=1 \
     PYTHONUNBUFFERED=1 \
@@ -8,11 +8,7 @@ ENV PYTHONFAULTHANDLER=1 \
     PYTHONHASHSEED=random \
     PIP_DISABLE_PIP_VERSION_CHECK=on \
     PIP_DEFAULT_TIMEOUT=100 \
-    POETRY_HOME="/opt/poetry" \
-    POETRY_VIRTUALENVS_CREATE=false \
-    POETRY_NO_INTERACTION=1 \
-    POETRY_NO_ANSI=1 \
-    POETRY_INSTALLER_NO_BINARY="pillow"
+    UV_SYSTEM_PYTHON=1
 
 # Pillow runtime dependencies
 # TODO: remove testing repository when alpine 3.22 is released (libraqm is only on edge for now)
@@ -25,17 +21,22 @@ ARG UID GID
 RUN addgroup -S ballsdex -g ${GID:-1000} && adduser -S ballsdex -G ballsdex -u ${UID:-1000}
 WORKDIR /code
 
-FROM base AS builder-base
+FROM base AS builder-uv
 
 # Pillow build dependencies
 RUN apk add --no-cache gcc libc-dev
 
-COPY poetry.lock pyproject.toml /code/
-RUN --mount=type=cache,target=/root/.cache/ \
-    pip install poetry==2.0.1 && poetry install --no-root
+# Bring in project sources for editable install during uv sync --active
 COPY . /code/
-RUN poetry install
+# Create a dedicated virtual environment and install locked dependencies into it
+RUN uv venv /opt/venv
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+RUN --mount=type=cache,target=/root/.cache/ \
+    UV_ACTIVE=1 uv sync --frozen --active
 
 FROM base AS production
-COPY --from=builder-base --parents /usr/local/lib/python*/site-packages/ /
+COPY --from=builder-uv /opt/venv /opt/venv
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 USER ballsdex

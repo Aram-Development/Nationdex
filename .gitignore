@@ -35,5 +35,11 @@ media
 
 # settings
 config.yml
+config.toml
 docker-compose.override.yml
 admin_panel/admin_panel/settings/production.py
+
+# json
+promocodes.json
+archived_promocodes.json
+promocodes.json.backup

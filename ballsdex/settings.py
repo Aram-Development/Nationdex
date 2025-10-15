@@ -3,7 +3,7 @@ import sys
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-import yaml
+import tomllib
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -116,6 +116,12 @@ class Settings:
     prometheus_host: str = "0.0.0.0"
     prometheus_port: int = 15260
 
+    # arampacks configuration
+    arampacks_enabled: bool = True
+    arampacks_file: str = "json/promocodes.json"
+    arampacks_archive_dir: str = "json/archived_promocodes"
+    arampacks_cache_expiry: int = 300
+
     spawn_chance_range: tuple[int, int] = (40, 55)
     spawn_manager: str = "ballsdex.packages.countryballs.spawn.SpawnManager"
 
@@ -140,8 +146,22 @@ class Settings:
 settings = Settings()
 
 
+def _escape_toml_string(value: str) -> str:
+    """Escape a string for TOML double-quoted representation."""
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def _array_str(items: list[str]) -> str:
+    return "[\n  " + ",\n  ".join(f'"{_escape_toml_string(x)}"' for x in items) + "\n]"
+
+
+def _array_int(items: list[int]) -> str:
+    return "[" + ", ".join(str(int(x)) for x in items) + "]"
+
+
 def read_settings(path: "Path"):
-    content = yaml.load(path.read_text(), yaml.Loader)
+    with path.open("rb") as f:
+        content = tomllib.load(f)
 
     settings.bot_token = content["discord-token"]
     settings.gateway_url = content.get("gateway-url")
@@ -176,15 +196,25 @@ def read_settings(path: "Path"):
     settings.prometheus_host = content["prometheus"]["host"]
     settings.prometheus_port = content["prometheus"]["port"]
 
+    if arampacks := content.get("arampacks"):
+        settings.arampacks_enabled = arampacks.get("enabled", True)
+        settings.arampacks_file = arampacks.get("file", "json/promocodes.json")
+        settings.arampacks_archive_dir = arampacks.get("archive-dir", "json/archived_promocodes")
+        settings.arampacks_cache_expiry = int(arampacks.get("cache-expiry-seconds", 300))
+
     settings.max_favorites = content.get("max-favorites", 50)
     settings.max_attack_bonus = content.get("max-attack-bonus", 20)
     settings.max_health_bonus = content.get("max-health-bonus", 20)
 
-    settings.packages = content.get("packages") or [
+    settings.packages = content.get("packages", [
         "ballsdex.packages.admin",
         "ballsdex.packages.balls",
+        "ballsdex.packages.battle",
+        "ballsdex.packages.boss",
+        "ballsdex.packages.broadcast",
         "ballsdex.packages.config",
         "ballsdex.packages.countryballs",
+        "ballsdex.packages.arampacks",
         "ballsdex.packages.info",
         "ballsdex.packages.players",
         "ballsdex.packages.trade",
@@ -226,327 +256,305 @@ def read_settings(path: "Path"):
 
 
 def write_default_settings(path: "Path"):
-    path.write_text(
-        """# yaml-language-server: $schema=json-config-ref.json
+    # Default TOML configuration file
+    default_toml = (
+        '''
+# BallsDex configuration file (TOML)
+# Fill in your Discord bot token
+discord-token = ""
 
-# paste the bot token after regenerating it here
-discord-token: 
+# Prefix for old-style text commands, mostly unused
+text-prefix = "b."
 
-# prefix for old-style text commands, mostly unused
-text-prefix: b.
+# Optional gateway settings
+#gateway-url = ""
+#shard-count = 1
 
-# define the elements given with the /about command
-about:
+# Naming
+collectible-name = "countryball"
+plural-collectible-name = "countryballs"
+bot-name = "BallsDex"
+players-group-cog-name = "balls"
+favorited-collectible-emoji = "❤️"
+show-rarity = false
 
-  # define the beginning of the description of /about
-  # the other parts is automatically generated
-  description: >
-    Collect countryballs on Discord, exchange them and battle with friends!
+# Limits
+max-favorites = 50
+max-attack-bonus = 20
+max-health-bonus = 20
 
-  # override this if you have a fork
-  github-link: https://github.com/laggron42/BallsDex-DiscordBot
+[about]
+description = """
+Collect countryballs on Discord, exchange them and battle with friends!
+"""
+github-link = "https://github.com/laggron42/BallsDex-DiscordBot"
+discord-invite = "https://discord.gg/INVITE_CODE"
+terms-of-service = "https://gist.github.com/"
+privacy-policy = "https://gist.github.com/"
 
-  # valid invite for a Discord server
-  discord-invite: https://discord.gg/INVITE_CODE
+[admin-command]
+guild-ids = []
+root-role-ids = []
+admin-role-ids = []
 
-  terms-of-service: https://gist.github.com/ # replace with your own link
-  privacy-policy: https://gist.github.com/ # replace with your own link
+# Optional log channel for moderation actions
+#log-channel = 0
 
-# WORK IN PROGRESS, DOES NOT FULLY WORK
-# override the name "countryball" in the bot
-collectible-name: countryball
+[owners]
+team-members-are-owners = false
+co-owners = []
 
-# WORK IN PROGRESS, DOES NOT FULLY WORK
-# override the name "countryballs" in the bot
-plural-collectible-name: countryballs
+[admin-panel]
+# To enable Discord OAuth2 login, fill these
+client-id = ""
+client-secret = ""
+# To get admin notifications from the admin panel, create a Discord webhook and paste the URL
+webhook-url = ""
+# This will provide some hyperlinks to the admin panel when using /admin commands
+# Set to an empty string to disable those links entirely
+url = "http://localhost:8000"
 
-# WORK IN PROGRESS, DOES NOT FULLY WORK
-# override the name "BallsDex" in the bot
-bot-name: BallsDex
+# List of packages that will be loaded
+packages = [
+  "ballsdex.packages.admin",
+  "ballsdex.packages.balls",
+  "ballsdex.packages.battle",
+  "ballsdex.packages.boss",
+  "ballsdex.packages.broadcast",
+  "ballsdex.packages.config",
+  "ballsdex.packages.countryballs",
+  "ballsdex.packages.arampacks",
+  "ballsdex.packages.info",
+  "ballsdex.packages.players",
+  "ballsdex.packages.trade",
+]
 
-# players group cog command name
-# this is /balls by default, but you can change it for /animals or /rocks for example
-players-group-cog-name: balls
+# Extend the database registered models, useful for 3rd party packages
+extra-tortoise-models = []
 
-# emoji used to represent a favorited collectible
-favorited-collectible-emoji: ❤️
+# Extend the Django admin panel with extra apps
+# You can also edit DJANGO_SETTINGS_MODULE for extended configuration
+extra-django-apps = []
 
-# maximum amount of favorites that are allowed
-max-favorites: 50
+[prometheus]
+enabled = false
+host = "0.0.0.0"
+port = 15260
 
-# the highest/lowest possible attack bonus, do not leave empty
-# this cannot be smaller than 0, enter a positive number
-max-attack-bonus: 20
+[arampacks]
+# Turn the AramPacks system on/off (promocodes and rarity tiers)
+enabled = true
+# Where to store active promocodes
+file = "json/promocodes.json"
+# Where to archive deleted/expired promocodes
+archive-dir = "json/archived_promocodes"
+# Cache lifetime (seconds) before re-reading the file if not modified
+cache-expiry-seconds = 300
 
-# the highest/lowest possible health bonus, do not leave empty
-# this cannot be smaller than 0, enter a positive number
-max-health-bonus: 20
-
-# enables the /admin command
-admin-command:
-
-  # all items here are list of IDs. example on how to write IDs in a list:
-  # guild-ids:
-  #   - 1049118743101452329
-  #   - 1078701108500897923
-
-  # list of guild IDs where /admin should be registered
-  guild-ids:
-
-  # list of role IDs having full access to /admin
-  root-role-ids:
-
-  # list of role IDs having partial access to /admin
-  admin-role-ids:
-
-  # list of channel IDs where admins can bypass privacy settings, empty means no restriction
-  admin-channel-ids:
-
-# log channel for moderation actions
-log-channel:
-
-# manage bot ownership
-owners:
-  # if enabled and the application is under a team, all team members will be considered as owners
-  team-members-are-owners: false
-
-  # a list of IDs that must be considered owners in addition to the application/team owner
-  co-owners:
-
-
-# Admin panel related settings
-admin-panel:
-
-    # to enable Discord OAuth2 login, fill this
-    # client ID of the Discord application (not the bot's user ID)
-    client-id: 
-    # client secret of the Discord application (this is not the bot token)
-    client-secret: 
-
-    # to get admin notifications from the admin panel, create a Discord webhook and paste the url
-    webhook-url: 
-
-    # this will provide some hyperlinks to the admin panel when using /admin commands
-    # set to an empty string to disable those links entirely
-    url: http://localhost:8000
-
-# list of packages that will be loaded
-packages:
-  - ballsdex.packages.admin
-  - ballsdex.packages.balls
-  - ballsdex.packages.config
-  - ballsdex.packages.countryballs
-  - ballsdex.packages.info
-  - ballsdex.packages.players
-  - ballsdex.packages.trade
-
-# extend the database registered models, useful for 3rd party packages
-extra-tortoise-models:
-
-# extend the Django admin panel with extra apps
-# you can also edit DJANGO_SETTINGS_MODULE for extended configuration
-extra-django-apps:
-
-# prometheus metrics collection, leave disabled if you don't know what this is
-prometheus:
-  enabled: false
-  host: "0.0.0.0"
-  port: 15260 
-
-# spawn chance range
-# with the default spawn manager, this is *approximately* the min/max number of minutes
+# Spawn chance range
+# With the default spawn manager, this is approximately the min/max number of minutes
 # until spawning a countryball, before processing activity
-spawn-chance-range: [40, 55] 
+spawn-chance-range = [40, 55]
 
-spawn-manager: ballsdex.packages.countryballs.spawn.SpawnManager
+# Define a custom spawn manager implementation
+spawn-manager = "ballsdex.packages.countryballs.spawn.SpawnManager"
 
-# sentry details, leave empty if you don't know what this is
+# Sentry details, leave empty if you don't know what this is
 # https://sentry.io/ for error tracking
-sentry:
-    dsn: ""
-    environment: "production"
+[sentry]
+dsn = ""
+environment = "production"
 
-catch:
-  # Add any number of messages to each of these categories. The bot will select a random
-  # one each time.
-  # {user} is mention. {collectible} is collectible name. {ball} is ball name, and 
-  # {collectibles} is collectible plural.
+[catch]
+# Add any number of messages to each of these categories. The bot will select a random one.
 
-  # the label shown on the catch button
-  catch_button_label: "Catch me!"
+# The label shown on the catch button
+catch_button_label = "Catch me!"
 
-  # the message that appears when a user catches a ball 
-  caught_msgs:
-    - "{user} You caught **{ball}**!"
+# The message that appears when a user catches a ball
+caught_msgs = [
+  "{user} You caught **{ball}**!",
+]
 
-  # the message that appears when a user gets the name wrong
-  # here and only here, you can use {wrong} to show the wrong name that was entered
-  # note that a user can put whatever they want into that field, so be careful
-  wrong_msgs:
-    # - {user} Wrong name! You put: {wrong}
-    - "{user} Wrong name!"
+# The message that appears when a user gets the name wrong
+# Here and only here, you can use {wrong} to show the wrong name that was entered
+# Note that a user can put whatever they want into that field, so be careful
+wrong_msgs = [
+  "{user} Wrong name!",
+]
 
-  # the message that appears above the spawn art
-  # {user} is not available here, because who would it ping?
-  spawn_msgs:
-    - "A wild {collectible} appeared!"
+# The message that appears above the spawn art
+spawn_msgs = [
+  "A wild {collectible} appeared!",
+]
 
-  # the message that appears when a user is to slow to catch a ball
-  slow_msgs:
-    - "{user} Sorry, this {collectible} was caught already!"
-  """  # noqa: W291
+# The message that appears when a user is too slow to catch a ball
+slow_msgs = [
+  "{user} Sorry, this {collectible} was caught already!",
+]
+
+[arampacks]
+# Turn the AramPacks system on/off (promocodes and rarity tiers)
+enabled = true
+# Where to store active promocodes
+file = "json/promocodes.json"
+# Where to archive deleted/expired promocodes
+archive-dir = "json/archived_promocodes"
+# Cache lifetime (seconds) before re-reading the file if not modified
+cache-expiry-seconds = 300
+'''
     )
+    path.write_text(default_toml)
 
 
 def update_settings(path: "Path"):
     content = path.read_text()
 
-    add_owners = True
-    add_config_ref = "# yaml-language-server: $schema=json-config-ref.json" not in content
-    add_max_favorites = "max-favorites:" not in content
+    add_owners = "[owners]" not in content
+    add_max_favorites = "max-favorites" not in content
     add_max_attack = "max-attack-bonus" not in content
     add_max_health = "max-health-bonus" not in content
     add_plural_collectible = "plural-collectible-name" not in content
-    add_packages = "packages:" not in content
+    add_packages = "\npackages = [" not in content
     add_spawn_chance_range = "spawn-chance-range" not in content
     add_spawn_manager = "spawn-manager" not in content
-    add_django = "Admin panel related settings" not in content
-    add_sentry = "sentry:" not in content
-    add_catch_messages = "catch:" not in content
-    add_extra_models = "extra-tortoise-models:" not in content
+    add_admin_panel = "[admin-panel]" not in content
+    add_sentry = "\n[sentry]" not in content
+    add_arampacks = "\n[arampacks]" not in content
+    add_catch_messages = "\n[catch]" not in content
 
     for line in content.splitlines():
-        if line.startswith("owners:"):
+        if line.startswith("[owners]"):
             add_owners = False
 
     if add_owners:
         content += """
-# manage bot ownership
-owners:
-  # if enabled and the application is under a team, all team members will be considered as owners
-  team-members-are-owners: false
 
-  # a list of IDs that must be considered owners in addition to the application/team owner
-  co-owners:
+# manage bot ownership
+[owners]
+team-members-are-owners = false
+co-owners = []
 """
-    if add_config_ref:
-        if "# yaml-language-server: $schema=config-ref.json" in content:
-            # old file name replacement
-            content = content.replace("$schema=config-ref.json", "$schema=json-config-ref.json")
-        else:
-            content = "# yaml-language-server: $schema=json-config-ref.json\n" + content
 
     if add_max_favorites:
         content += """
+
 # maximum amount of favorites that are allowed
-max-favorites: 50
+max-favorites = 50
 """
 
     if add_max_attack:
         content += """
+
 # the highest/lowest possible attack bonus, do not leave empty
 # this cannot be smaller than 0, enter a positive number
-max-attack-bonus: 20
+max-attack-bonus = 20
 """
 
     if add_max_health:
         content += """
+
 # the highest/lowest possible health bonus, do not leave empty
 # this cannot be smaller than 0, enter a positive number
-max-health-bonus: 20
+max-health-bonus = 20
 """
+
     if add_plural_collectible:
         content += """
+
 # WORK IN PROGRESS, DOES NOT FULLY WORK
 # override the name "countryballs" in the bot
-plural-collectible-name: countryballs
+plural-collectible-name = "countryballs"
 """
 
     if add_packages:
         content += """
+
 # list of packages that will be loaded
-packages:
-  - ballsdex.packages.admin
-  - ballsdex.packages.balls
-  - ballsdex.packages.config
-  - ballsdex.packages.countryballs
-  - ballsdex.packages.info
-  - ballsdex.packages.players
-  - ballsdex.packages.trade
+packages = [
+  "ballsdex.packages.admin",
+  "ballsdex.packages.balls",
+  "ballsdex.packages.battle",
+  "ballsdex.packages.boss",
+  "ballsdex.packages.broadcast",
+  "ballsdex.packages.config",
+  "ballsdex.packages.countryballs",
+  "ballsdex.packages.arampacks",
+  "ballsdex.packages.info",
+  "ballsdex.packages.players",
+  "ballsdex.packages.trade",
+]
 """
 
     if add_spawn_chance_range:
         content += """
+
 # spawn chance range
-# with the default spawn manager, this is *approximately* the min/max number of minutes
+# with the default spawn manager, this is approximately the min/max number of minutes
 # until spawning a countryball, before processing activity
-spawn-chance-range: [40, 55]
+spawn-chance-range = [40, 55]
 """
+
     if add_spawn_manager:
         content += """
+
 # define a custom spawn manager implementation
-spawn-manager: ballsdex.packages.countryballs.spawn.SpawnManager
+spawn-manager = "ballsdex.packages.countryballs.spawn.SpawnManager"
 """
 
-    if add_django:
+    if add_admin_panel:
         content += """
+
 # Admin panel related settings
-admin-panel:
-
-    # to enable Discord OAuth2 login, fill this
-    # client ID of the Discord application (not the bot's user ID)
-    client-id:
-    # client secret of the Discord application (this is not the bot token)
-    client-secret:
-
-    # to get admin notifications from the admin panel, create a Discord webhook and paste the url
-    webhook-url:
-
-    # this will provide some hyperlinks to the admin panel when using /admin commands
-    # set to an empty string to disable those links entirely
-    url: http://localhost:8000
-
+[admin-panel]
+client-id = ""
+client-secret = ""
+webhook-url = ""
+url = "http://localhost:8000"
 """
 
     if add_sentry:
         content += """
+
 # sentry details, leave empty if you don't know what this is
 # https://sentry.io/ for error tracking
-sentry:
-    dsn: ""
-    environment: "production"
+[sentry]
+dsn = ""
+environment = "production"
+"""
+
+    if add_arampacks:
+        content += """
+
+[arampacks]
+# Turn the AramPacks system on/off (promocodes and rarity tiers)
+enabled = true
+# Where to store active promocodes
+file = "json/promocodes.json"
+# Where to archive deleted/expired promocodes
+archive-dir = "json/archived_promocodes"
+# Cache lifetime (seconds) before re-reading the file if not modified
+cache-expiry-seconds = 300
 """
 
     if add_catch_messages:
         content += """
-catch:
-  # Add any number of messages to each of these categories. The bot will select a random
-  # one each time.
-  # {user} is mention. {collectible} is collectible name. {ball} is ball name, and
-  # {collectibles} is collectible plural.
 
-  # the label shown on the catch button
-  catch_button_label: "Catch me!"
-
-  # the message that appears when a user catches a ball
-  caught_msgs:
-    - "{user} You caught **{ball}**!"
-
-  # the message that appears when a user gets the name wrong
-  # here and only here, you can use {wrong} to show the wrong name that was entered
-  # note that a user can put whatever they want into that field, so be careful
-  wrong_msgs:
-    # - {user} Wrong name! You put: {wrong}
-    - "{user} Wrong name!"
-
-  # the message that appears above the spawn art
-  # {user} is not available here, because who would it ping?
-  spawn_msgs:
-    - "A wild {collectible} appeared!"
-
-  # the message that appears when a user is to slow to catch a ball
-  slow_msgs:
-    - "{user} Sorry, this {collectible} was caught already!"
+[catch]
+# Add any number of messages to each of these categories. The bot will select a random one.
+catch_button_label = "Catch me!"
+caught_msgs = [
+  "{user} You caught **{ball}**!",
+]
+wrong_msgs = [
+  "{user} Wrong name!",
+]
+spawn_msgs = [
+  "A wild {collectible} appeared!",
+]
+slow_msgs = [
+  "{user} Sorry, this {collectible} was caught already!",
+]
 """
 
     if add_extra_models:
@@ -562,7 +570,6 @@ extra-django-apps:
     if any(
         (
             add_owners,
-            add_config_ref,
             add_max_favorites,
             add_max_attack,
             add_max_health,
@@ -570,10 +577,11 @@ extra-django-apps:
             add_packages,
             add_spawn_chance_range,
             add_spawn_manager,
-            add_django,
+            add_admin_panel,
             add_sentry,
             add_catch_messages,
             add_extra_models,
+            add_arampacks,
         )
     ):
         path.write_text(content)

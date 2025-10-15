@@ -41,10 +41,10 @@ DISCORD_API = "https://discord.com/api/v10/"
 
 
 class Status(Enum):
-    STAFF = 0  # has a role in the "admin-role-ids" of config.yml
-    ADMIN = 1  # has a role in the "root-role-ids" of config.yml
+    STAFF = 0  # has a role in the "admin-role-ids" of config.toml
+    ADMIN = 1  # has a role in the "root-role-ids" of config.toml
     TEAM_MEMBER = 2  # is a member of the Discord team owning the application
-    CO_OWNER = 3  # has its ID in the "co-owners" section of config.yml
+    CO_OWNER = 3  # has its ID in the "co-owners" section of config.toml
     OWNER = 4  # owns the application
 
 
@@ -124,7 +124,7 @@ async def assign_status(request: "HttpRequest", response: dict, user: "User", st
         )
     elif status == Status.CO_OWNER:
         user.is_superuser = True
-        message = "You were assigned the superuser status because you are a co-owner in config.yml"
+        message = "You were assigned the superuser status because you are a co-owner in config.toml"
     elif status == Status.OWNER:
         user.is_superuser = True
         message = (
@@ -155,7 +155,7 @@ async def configure_status(
         return
     discord_id = int(uid)
 
-    # check if user is a co-owner in config.yml (no API call required)
+    # check if user is a co-owner in config.toml (no API call required)
     if settings.co_owners and discord_id in settings.co_owners:
         await assign_status(request, response, user, Status.CO_OWNER)
         return
@@ -185,7 +185,7 @@ async def configure_status(
         if not settings.admin_guild_ids or not (settings.admin_role_ids or settings.root_role_ids):
             return
 
-        # check if the user owns roles configured as root/admin in config.yml
+        # check if the user owns roles configured as root/admin in config.toml
         session.headers["Authorization"] = f"Bearer {response['access_token']}"
         async with session.get("users/@me/guilds") as resp:
             guilds = await resp.json()

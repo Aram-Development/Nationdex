@@ -22,18 +22,18 @@ Export the appropriate environment variables as described in the
 
 ### Installing the dependencies
 
-1. Get Python 3.13 and pip.
-2. Install poetry with `pip install poetry`.
-3. Run `poetry install`.
-4. You may run commands inside the virtualenv with `poetry run ...`, or use `poetry shell`.
+1. Get Python 3.13.
+2. Install [uv](https://docs.astral.sh/uv/):
+   - macOS/Linux: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+3. Create the virtual environment and install dependencies:
+   - `uv sync`
+4. Run commands inside the environment with `uv run ...`.
 
 ## Running the code
 
-Before running any command, you must be in the poetry virtualenv, with the following
-environment variables exported:
+Before running any command, ensure you have the required environment variables exported:
 
 ```bash
-poetry shell
 export BALLSDEXBOT_DB_URL="postgres://ballsdex:defaultballsdexpassword@localhost:5432/ballsdex"
 ```
 
@@ -42,7 +42,7 @@ If needed, feel free to change the host, port, user or password of the database 
 ### Starting the bot
 
 ```bash
-python3 -m ballsdex --dev --debug
+uv run python -m ballsdex --dev --debug
 ```
 
 You can do `python3 -m ballsdex -h` to see the available options.
@@ -52,9 +52,9 @@ You can do `python3 -m ballsdex -h` to see the available options.
 ```bash
 cd admin_panel
 export DJANGO_SETTINGS_MODULE=admin_panel.settings.dev
-python3 manage.py migrate
-python3 manage.py collectstatic --no-input
-uvicorn --reload --reload-include "*.html" admin_panel.asgi:application
+uv run python manage.py migrate
+uv run python manage.py collectstatic --no-input
+uv run uvicorn --reload --reload-include "*.html" admin_panel.asgi:application
 ```
 
 You will be running the admin panel with additional debug tools. There is the django debug
@@ -76,11 +76,8 @@ pyinstrument, allowing you to profile a page by appending `?profile` at the end.
 
 ## Integrating your IDE
 
-To have proper autocompletion and type checking, your IDE must be aware of your poetry virtualenv.
-
-The path to Python can be obtained with `poetry env info -p`, copy that and configure your editor
-to use it. Some editors like VS code may detect your poetry env automatically when picking
-versions.
+To have proper autocompletion and type checking, point your IDE to the uv-created virtualenv
+at `.venv/` (created by `uv sync`). Many editors (e.g. VS Code) will detect it automatically.
 
 You can also install extensions to work with black, flake8 and pyright (Pylance for VS code).
 Their configurations are already written in `pyproject.toml`, so it should work as-is.
