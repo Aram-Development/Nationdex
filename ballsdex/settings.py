@@ -100,6 +100,7 @@ class Settings:
     admin_guild_ids: list[int] = field(default_factory=list)
     root_role_ids: list[int] = field(default_factory=list)
     admin_role_ids: list[int] = field(default_factory=list)
+    admin_channel_ids: list[int] = field(default_factory=list)
 
     log_channel: int | None = None
 
@@ -107,6 +108,8 @@ class Settings:
     co_owners: list[int] = field(default_factory=list)
 
     packages: list[str] = field(default_factory=list)
+    tortoise_models: list[str] = field(default_factory=list)
+    django_apps: list[str] = field(default_factory=list)
 
     # metrics and prometheus
     prometheus_enabled: bool = False
@@ -185,6 +188,7 @@ def read_settings(path: "Path"):
     settings.admin_guild_ids = content["admin-command"]["guild-ids"] or []
     settings.root_role_ids = content["admin-command"]["root-role-ids"] or []
     settings.admin_role_ids = content["admin-command"]["admin-role-ids"] or []
+    settings.admin_channel_ids = content["admin-command"].get("admin-channel-ids", []) or []
 
     settings.log_channel = content.get("log-channel", None)
 
@@ -214,7 +218,9 @@ def read_settings(path: "Path"):
         "ballsdex.packages.info",
         "ballsdex.packages.players",
         "ballsdex.packages.trade",
-    ])
+    ]
+    settings.tortoise_models = content.get("extra-tortoise-models") or []
+    settings.django_apps = content.get("extra-django-apps") or []
 
     spawn_range = content.get("spawn-chance-range", [40, 55])
     settings.spawn_chance_range = tuple(spawn_range)
@@ -323,6 +329,13 @@ packages = [
   "ballsdex.packages.trade",
 ]
 
+# Extend the database registered models, useful for 3rd party packages
+extra-tortoise-models = []
+
+# Extend the Django admin panel with extra apps
+# You can also edit DJANGO_SETTINGS_MODULE for extended configuration
+extra-django-apps = []
+
 [prometheus]
 enabled = false
 host = "0.0.0.0"
@@ -409,6 +422,10 @@ def update_settings(path: "Path"):
     add_sentry = "\n[sentry]" not in content
     add_arampacks = "\n[arampacks]" not in content
     add_catch_messages = "\n[catch]" not in content
+
+    for line in content.splitlines():
+        if line.startswith("[owners]"):
+            add_owners = False
 
     if add_owners:
         content += """
@@ -540,6 +557,16 @@ slow_msgs = [
 ]
 """
 
+    if add_extra_models:
+        content += """
+# Extend the database registered models, useful for 3rd party packages
+extra-tortoise-models = []
+
+# Extend the Django admin panel with extra apps
+# You can also edit DJANGO_SETTINGS_MODULE for extended configuration
+extra-django-apps = []
+"""
+
     if any(
         (
             add_owners,
@@ -553,6 +580,7 @@ slow_msgs = [
             add_admin_panel,
             add_sentry,
             add_catch_messages,
+            add_extra_models,
             add_arampacks,
         )
     ):
