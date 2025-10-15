@@ -559,12 +559,12 @@ slow_msgs = [
 
     if add_extra_models:
         content += """
-# extend the database registered models, useful for 3rd party packages
-extra-tortoise-models:
+# Extend the database registered models, useful for 3rd party packages
+extra-tortoise-models = []
 
-# extend the Django admin panel with extra apps
-# you can also edit DJANGO_SETTINGS_MODULE for extended configuration
-extra-django-apps:
+# Extend the Django admin panel with extra apps
+# You can also edit DJANGO_SETTINGS_MODULE for extended configuration
+extra-django-apps = []
 """
 
     if any(
