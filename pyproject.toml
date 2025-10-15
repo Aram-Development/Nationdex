@@ -28,7 +28,7 @@ dependencies = [
     "django-admin-action-forms==2.2.0",
     "django-admin-inline-paginator==0.4.0",
     "dj-database-url==3.0.1",
-    "social-auth-app-django==5.5.1",
+    "social-auth-app-django==5.6.0",
     "psycopg==3.2.10",
     "psycopg-binary==3.2.10",
 
