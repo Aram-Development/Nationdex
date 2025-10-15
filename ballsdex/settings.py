@@ -212,7 +212,7 @@ def read_settings(path: "Path"):
     settings.max_attack_bonus = content.get("max-attack-bonus", 20)
     settings.max_health_bonus = content.get("max-health-bonus", 20)
 
-    settings.packages = content.get("packages", [
+    settings.packages = content.get("packages") or [
         "ballsdex.packages.admin",
         "ballsdex.packages.balls",
         "ballsdex.packages.battle",
