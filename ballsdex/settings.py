@@ -449,10 +449,21 @@ def update_settings(path: "Path"):
     add_sentry = "\n[sentry]" not in content
     add_arampacks = "\n[arampacks]" not in content
     add_catch_messages = "\n[catch]" not in content
+    has_extra_tortoise = False
+    has_extra_django = False
 
     for line in content.splitlines():
-        if line.startswith("[owners]"):
+        stripped = line.strip()
+        if stripped.startswith("[owners]"):
             add_owners = False
+        if stripped.startswith("#"):
+            continue
+        if stripped.startswith("extra-tortoise-models"):
+            has_extra_tortoise = True
+        elif stripped.startswith("extra-django-apps"):
+            has_extra_django = True
+
+    add_extra_models = not (has_extra_tortoise and has_extra_django)
 
     if add_owners:
         content += """
