@@ -52,7 +52,7 @@ dev = [
     "flake8-pyproject==1.2.3",
     "flake8==7.3.0",
     "pyright==1.1.406",
-    "isort==6.0.1",
+    "isort==7.0.0",
     "django-debug-toolbar==6.0.0",
     "pyinstrument==5.1.1",
     "django-types==0.22.0",
