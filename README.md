@@ -75,6 +75,7 @@ This project now uses [uv](https://docs.astral.sh/uv/) for fast dependency manag
   - Use `docker compose up --build` to build and run the full stack.
 
 Notes:
+
 - Configuration uses `config.toml` at the repository root.
 - The admin panel reads TOML via `ballsdex.settings.read_settings`.
 - For production, set `DJANGO_SECRET_KEY` and configure `DJANGO_ALLOWED_HOSTS`.
