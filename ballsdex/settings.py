@@ -260,7 +260,7 @@ def read_settings(path: "Path"):
         settings.slow_messages_ptbr = catch.get("slow_msgs_ptbr") or []
 
     # avoids signaling needed migrations
-    if "makemigrations" in sys.argv:
+    if "makemigrations" in sys.argv or "migrate" in sys.argv:
         settings.collectible_name = "ball"
         settings.plural_collectible_name = "balls"
 
