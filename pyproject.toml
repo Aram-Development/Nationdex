@@ -41,14 +41,13 @@ dependencies = [
     "Pillow==12.0.0",
     "cachetools==6.2.1",
     "sentry-sdk[asyncpg]==2.43.0",
-    # Provide audioop backport for Python 3.13 (stdlib audioop removed)
     "audioop-lts>=0.2; python_version >= '3.13'",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pre-commit==4.3.0",
-    "black==25.9.0",
+    "black==24.8.0",
     "flake8-pyproject==1.2.3",
     "flake8==7.3.0",
     "pyright==1.1.407",
@@ -56,6 +55,7 @@ dev = [
     "django-debug-toolbar==6.0.0",
     "pyinstrument==5.1.1",
     "django-types==0.22.0",
+    "tomlkit==0.13.3"
 ]
 
 [build-system]
