@@ -22,7 +22,7 @@ dependencies = [
     # django admin panel
     "uvicorn[standard]==0.38.0",
     "django==5.2.7",
-    "django-allow-cidr (>=0.7.1,<0.9.0)",
+    "django-allow-cidr==0.8.0",
     "django-nonrelated-inlines==0.2",
     "django-admin-autocomplete-filter==0.7.1",
     "django-admin-action-forms==2.2.1",
@@ -41,7 +41,7 @@ dependencies = [
     "Pillow==12.0.0",
     "cachetools==6.2.1",
     "sentry-sdk[asyncpg]==2.43.0",
-    "audioop-lts>=0.2; python_version >= '3.13'",
+    "audioop-lts==0.2.2; python_version >= '3.13'",
 ]
 
 [project.optional-dependencies]
