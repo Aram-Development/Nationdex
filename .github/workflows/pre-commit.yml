@@ -25,7 +25,7 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
       - name: Install dev tools
         run: |
-          uv pip install --system black flake8 isort pyright pre-commit
+          uv pip install --system black==25.9.0 flake8 isort pyright pre-commit
       - name: Run black
         run: black --check --diff $(git ls-files "*.py")
       - name: Run pre-commit checks
