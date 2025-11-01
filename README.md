@@ -1,8 +1,8 @@
 # Nationdex Discord Bot
 
-![NationDex Banner](assets/nationdex_banner.png)
+![NationDex Banner](admin_panel/media/nationdexbanner.jpeg)
 
-**Nationdex** is a unique fork of BallsDex, designed to deliver the best user experience with no limitations and over 100 nations to catch!
+**Nationdex** is a unique fork of Ballsdex, soon to become a independent bot with the definitive codebase we all wanted, designed to deliver the best user experience with less limitations and over 100 nations to catch!
 
 [**Invite the bot to your server!**](https://discord.com/application-directory/1207017704096141312)
 
