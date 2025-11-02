@@ -31,6 +31,7 @@ jobs:
         run: |
           uv sync --extra dev
       - name: Run black
-        run: uv run black --check --diff $(git ls-files "*.py")
+        shell: bash
+        run: uv run python -m black --check --diff $(git ls-files "*.py")
       - name: Run pre-commit checks
         run: uv run pre-commit run -a
