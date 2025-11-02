@@ -269,8 +269,7 @@ def read_settings(path: "Path"):
 
 def write_default_settings(path: "Path"):
     # Default TOML configuration file
-    default_toml = (
-        '''
+    default_toml = '''
 # BallsDex configuration file (TOML)
 # Fill in your Discord bot token
 discord-token = ""
@@ -430,7 +429,6 @@ archive-dir = "json/archived_promocodes"
 # Cache lifetime (seconds) before re-reading the file if not modified
 cache-expiry-seconds = 300
 '''
-    )
     path.write_text(default_toml)
 
 

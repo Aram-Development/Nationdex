@@ -12,10 +12,13 @@ import subprocess
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "admin_panel.settings")
 
 import django
+
 django.setup()
 
 from django.core.management import execute_from_command_line
-from django.contrib.staticfiles.management.commands.collectstatic import Command as CollectStaticCommand
+from django.contrib.staticfiles.management.commands.collectstatic import (
+    Command as CollectStaticCommand,
+)
 from django.conf import settings
 
 # Monkey-patch the delete_file method to handle permission errors gracefully

@@ -124,7 +124,9 @@ async def assign_status(request: "HttpRequest", response: dict, user: "User", st
         )
     elif status == Status.CO_OWNER:
         user.is_superuser = True
-        message = "You were assigned the superuser status because you are a co-owner in config.toml"
+        message = (
+            "You were assigned the superuser status because you are a co-owner in config.toml"
+        )
     elif status == Status.OWNER:
         user.is_superuser = True
         message = (
