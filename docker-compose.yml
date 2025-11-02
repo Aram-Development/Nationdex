@@ -10,7 +10,11 @@ services:
   bot:
     restart: "no"
     image: ballsdex
-    build: .
+    build:
+      context: .
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
     environment:
       - *postgres-url
     depends_on:
@@ -30,7 +34,11 @@ services:
 
   admin-panel:
     image: ballsdex
-    build: .
+    build:
+      context: .
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
     ports:
       - "8000:8000"
     networks:
@@ -58,7 +66,11 @@ services:
 
   migration:
     image: ballsdex
-    build: .
+    build:
+      context: .
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
     networks:
       - internal
     environment:
@@ -72,7 +84,8 @@ services:
     command: >
       sh -c "
       python3 manage.py migrate --no-input --fake-initial &&
-      python3 manage.py collectstatic --no-input
+      mkdir -p static &&
+      python3 collectstatic_safe.py || true
       "
 
   postgres-db:
