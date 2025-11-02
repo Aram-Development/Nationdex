@@ -19,14 +19,18 @@ jobs:
         with:
           path: ~/.cache/pre-commit
           key: pre-commit|${{ env.pythonLocation }}|${{ hashFiles('.pre-commit-config.yaml') }}
+      - uses: actions/cache@v4
+        with:
+          path: .venv
+          key: uv-${{ hashFiles('pyproject.toml') }}-${{ hashFiles('uv.lock') }}
       - name: Install uv
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.local/bin" >> $GITHUB_PATH
       - name: Install dev tools
         run: |
-          uv pip install --system black==25.9.0 flake8 isort pyright pre-commit
+          uv sync --extra dev
       - name: Run black
-        run: black --check --diff $(git ls-files "*.py")
+        run: uv run black --check --diff $(git ls-files "*.py")
       - name: Run pre-commit checks
-        run: pre-commit run -a
+        run: uv run pre-commit run -a
