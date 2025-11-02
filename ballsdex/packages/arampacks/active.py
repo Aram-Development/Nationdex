@@ -4,6 +4,7 @@ import os
 import random
 import time
 import fcntl
+from pathlib import Path
 from threading import RLock
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, Optional, Set, List, Union
@@ -25,12 +26,36 @@ console_handler.setLevel(logging.INFO)
 console_handler.setFormatter(formatter)
 log.addHandler(console_handler)
 
-# Create a file handler for the dedicated promocode.log file
-log_file_path = os.path.join(os.path.dirname(__file__), "arampacks.log")
-file_handler = logging.FileHandler(log_file_path, encoding="utf-8")
-file_handler.setLevel(logging.INFO)
-file_handler.setFormatter(formatter)
-log.addHandler(file_handler)
+# Create a file handler for the dedicated arampacks.log file
+# Try multiple locations in case of permission issues
+log_file_paths = [
+    os.path.join(os.path.dirname(__file__), "arampacks.log"),  # Try current directory first
+    os.path.join("logs", "arampacks.log"),  # Try logs subdirectory
+    os.path.join("/tmp", "arampacks.log"),  # Fallback to /tmp
+]
+
+file_handler = None
+for log_file_path in log_file_paths:
+    try:
+        # Ensure directory exists if using a subdirectory
+        directory = os.path.dirname(log_file_path)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+        
+        file_handler = logging.FileHandler(log_file_path, encoding="utf-8")
+        file_handler.setLevel(logging.INFO)
+        file_handler.setFormatter(formatter)
+        log.addHandler(file_handler)
+        # Successfully created handler, break out of loop
+        break
+    except (PermissionError, OSError):
+        # Continue to next path if this one fails
+        continue
+
+# If file_handler is None, file logging will be disabled (console only)
+if file_handler is None:
+    # Note: Logger not fully configured yet, but console logging will still work
+    pass
 
 # Set overall logger level
 log.setLevel(logging.INFO)
