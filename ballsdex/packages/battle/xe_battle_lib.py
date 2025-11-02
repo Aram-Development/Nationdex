@@ -35,7 +35,9 @@ def attack(current_ball, enemy_balls):
         enemy.health = 0
         enemy.dead = True
     if enemy.dead:
-        gen_text = f"{current_ball.owner}'s {current_ball.name} has killed {enemy.owner}'s {enemy.name}"
+        gen_text = (
+            f"{current_ball.owner}'s {current_ball.name} has killed {enemy.owner}'s {enemy.name}"
+        )
     else:
         gen_text = f"{current_ball.owner}'s {current_ball.name} has dealt {attack_dealt} damage to {enemy.owner}'s {enemy.name}"
     return gen_text

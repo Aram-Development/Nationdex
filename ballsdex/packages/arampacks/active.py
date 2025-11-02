@@ -18,7 +18,9 @@ log.handlers.clear()
 log.propagate = False
 
 # Create formatter for consistent log format
-formatter = logging.Formatter('[{asctime}] {levelname} {name}: {message}', datefmt='%Y-%m-%d %H:%M:%S', style='{')
+formatter = logging.Formatter(
+    "[{asctime}] {levelname} {name}: {message}", datefmt="%Y-%m-%d %H:%M:%S", style="{"
+)
 
 # Create a console handler that will show in docker logs
 console_handler = logging.StreamHandler()
@@ -41,7 +43,7 @@ for log_file_path in log_file_paths:
         directory = os.path.dirname(log_file_path)
         if directory:
             os.makedirs(directory, exist_ok=True)
-        
+
         file_handler = logging.FileHandler(log_file_path, encoding="utf-8")
         file_handler.setLevel(logging.INFO)
         file_handler.setFormatter(formatter)
@@ -67,7 +69,7 @@ PROMOCODES_ARCHIVE_FILE_PATH = "json/promocodes_archive.json"
 
 # Store active promocodes in memory
 # Format: code -> {expiry_date, uses_left, max_uses_per_user, rewards, used_by}
-# rewards: { "specific_ball": ball_id, "special": special_id } 
+# rewards: { "specific_ball": ball_id, "special": special_id }
 # None for specific_ball means random ball, None for special means no special event
 ACTIVE_PROMOCODES: Dict[str, Dict[str, Any]] = {
     # Default welcome promocode
@@ -75,11 +77,8 @@ ACTIVE_PROMOCODES: Dict[str, Dict[str, Any]] = {
         "expiry": datetime(2024, 12, 31, tzinfo=timezone.utc),
         "uses_left": 1000,
         "max_uses_per_user": 1,
-        "rewards": {
-            "specific_ball": None,  # Random ball
-            "special": None  # No special event
-        },
-        "used_by": set()  # Set of user IDs who used this code
+        "rewards": {"specific_ball": None, "special": None},  # Random ball  # No special event
+        "used_by": set(),  # Set of user IDs who used this code
     }
 }
 
@@ -96,10 +95,11 @@ MEM_LOCK: RLock = RLock()
 LAST_LOAD_TIME = 0.0
 LAST_FILE_MTIME = 0.0
 
+
 def save_promocodes_to_file() -> bool:
     """
     Save promocodes to file with file locking to prevent corruption
-    
+
     Returns
     -------
     bool
@@ -110,7 +110,7 @@ def save_promocodes_to_file() -> bool:
     try:
         # Log the current state of ACTIVE_PROMOCODES before saving
         log.info(f"Saving promocodes to file. Current codes: {list(ACTIVE_PROMOCODES.keys())}")
-        
+
         # Ensure directory exists
         directory = os.path.dirname(PROMOCODES_FILE_PATH)
         try:
@@ -121,21 +121,21 @@ def save_promocodes_to_file() -> bool:
         except OSError as e:
             log.error(f"OS error creating directory {directory}: {e}")
             return False
-            
+
         # Check if directory is writable
         if not os.access(directory, os.W_OK):
             log.error(f"Directory {directory} is not writable. Check permissions.")
             return False
-        
+
         # Create lock file path
         lock_file_path = f"{PROMOCODES_FILE_PATH}.lock"
-        
+
         # Acquire lock with timeout
         lock_acquired = False
         start_time = time.time()
         while not lock_acquired and time.time() - start_time < FILE_LOCK_TIMEOUT:
             try:
-                lock_file = open(lock_file_path, 'w')
+                lock_file = open(lock_file_path, "w")
                 fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
                 lock_acquired = True
             except (IOError, OSError) as e:
@@ -143,14 +143,14 @@ def save_promocodes_to_file() -> bool:
                     lock_file.close()
                     lock_file = None
                 time.sleep(0.1)  # Wait a bit and try again
-        
+
         if not lock_acquired:
             log.error(f"Failed to acquire file lock within {FILE_LOCK_TIMEOUT} seconds")
             return False
-        
+
         # Create a temporary file name
         temp_file_path = f"{PROMOCODES_FILE_PATH}.tmp"
-        
+
         # Prepare data for JSON serialization
         json_data = {}
         for code, data in ACTIVE_PROMOCODES.items():
@@ -164,11 +164,19 @@ def save_promocodes_to_file() -> bool:
                 "uses_left": data.get("uses_left", 0),
                 "max_uses_per_user": data.get("max_uses_per_user", 1),
                 "rewards": data.get("rewards", {}),
-                "used_by": list(data.get("used_by", [])) if isinstance(data.get("used_by"), set) else data.get("used_by", []),
+                "used_by": (
+                    list(data.get("used_by", []))
+                    if isinstance(data.get("used_by"), set)
+                    else data.get("used_by", [])
+                ),
             }
             # Optional metadata
             if "created_at" in data:
-                item["created_at"] = data["created_at"].isoformat() if isinstance(data["created_at"], datetime) else data["created_at"]
+                item["created_at"] = (
+                    data["created_at"].isoformat()
+                    if isinstance(data["created_at"], datetime)
+                    else data["created_at"]
+                )
             if "description" in data:
                 item["description"] = data["description"]
             if "is_hidden" in data:
@@ -176,13 +184,13 @@ def save_promocodes_to_file() -> bool:
             if "created_by" in data:
                 item["created_by"] = data["created_by"]
             json_data[code] = item
-        
+
         # Write to temporary file first
-        with open(temp_file_path, 'w', encoding='utf-8') as temp_file:
+        with open(temp_file_path, "w", encoding="utf-8") as temp_file:
             json.dump(json_data, temp_file, indent=2, ensure_ascii=False)
             temp_file.flush()  # Make sure data is written
             os.fsync(temp_file.fileno())  # Force write to disk
-        
+
         # Atomic move - rename temp file to actual file
         try:
             if os.path.exists(PROMOCODES_FILE_PATH):
@@ -190,20 +198,21 @@ def save_promocodes_to_file() -> bool:
                 backup_path = f"{PROMOCODES_FILE_PATH}.backup"
                 try:
                     import shutil
+
                     shutil.copy2(PROMOCODES_FILE_PATH, backup_path)
                     log.debug(f"Created backup at {backup_path}")
                 except Exception as backup_e:
                     log.warning(f"Failed to create backup: {backup_e}")
                     # Continue anyway since this is just a safety measure
-            
+
             # On Windows, we need to remove the target file first
-            if os.name == 'nt' and os.path.exists(PROMOCODES_FILE_PATH):
+            if os.name == "nt" and os.path.exists(PROMOCODES_FILE_PATH):
                 try:
                     os.remove(PROMOCODES_FILE_PATH)
                 except OSError as e:
                     log.error(f"Failed to remove existing file on Windows: {e}")
                     return False
-            
+
             os.rename(temp_file_path, PROMOCODES_FILE_PATH)
             # update last observed file mtime
             try:
@@ -211,9 +220,11 @@ def save_promocodes_to_file() -> bool:
                 LAST_FILE_MTIME = os.path.getmtime(PROMOCODES_FILE_PATH)
             except Exception:
                 pass
-            log.info(f"Successfully saved {len(ACTIVE_PROMOCODES)} promocodes to {PROMOCODES_FILE_PATH}")
+            log.info(
+                f"Successfully saved {len(ACTIVE_PROMOCODES)} promocodes to {PROMOCODES_FILE_PATH}"
+            )
             return True
-            
+
         except OSError as e:
             log.error(f"Failed to move temporary file to final destination: {e}")
             # Clean up temp file
@@ -223,7 +234,7 @@ def save_promocodes_to_file() -> bool:
             except Exception as cleanup_e:
                 log.warning(f"Failed to clean up temporary file: {cleanup_e}")
             return False
-            
+
     except Exception as e:
         log.exception(f"Unexpected error saving promocodes: {e}")
         return False
@@ -235,7 +246,7 @@ def save_promocodes_to_file() -> bool:
                 os.remove(temp_file_path)
         except Exception:
             pass
-            
+
         # Release lock
         if lock_file:
             try:
@@ -248,29 +259,34 @@ def save_promocodes_to_file() -> bool:
             except Exception as e:
                 log.warning(f"Error releasing file lock: {e}")
 
+
 def load_promocodes_from_file() -> bool:
     """
     Load promocodes from file with caching and file locking
-    
+
     Returns
     -------
     bool
         True if loaded successfully, False otherwise
     """
     global LAST_LOAD_TIME, LAST_FILE_MTIME, ACTIVE_PROMOCODES
-    
+
     try:
         # Check if we should reload based on cache expiry
         current_time = time.time()
         if current_time - LAST_LOAD_TIME < CACHE_EXPIRY:
-            log.debug(f"Using cached promocodes (last loaded {current_time - LAST_LOAD_TIME:.1f}s ago)")
+            log.debug(
+                f"Using cached promocodes (last loaded {current_time - LAST_LOAD_TIME:.1f}s ago)"
+            )
             return True
-        
+
         if not os.path.exists(PROMOCODES_FILE_PATH):
-            log.info(f"Promocodes file does not exist at {PROMOCODES_FILE_PATH}. Using default codes.")
+            log.info(
+                f"Promocodes file does not exist at {PROMOCODES_FILE_PATH}. Using default codes."
+            )
             # Save the default codes to create the file
             return save_promocodes_to_file()
-        
+
         # Check if file has been modified since last load
         try:
             file_mtime = os.path.getmtime(PROMOCODES_FILE_PATH)
@@ -279,18 +295,18 @@ def load_promocodes_from_file() -> bool:
                 return True
         except OSError as e:
             log.warning(f"Could not get file modification time: {e}")
-        
+
         # Load from file
-        with open(PROMOCODES_FILE_PATH, 'r', encoding='utf-8') as f:
+        with open(PROMOCODES_FILE_PATH, "r", encoding="utf-8") as f:
             json_data = json.load(f)
-        
+
         if not json_data:
             log.warning(f"Empty promocodes file at {PROMOCODES_FILE_PATH}")
             return False
-        
+
         # Clear current promocodes and load new ones
         ACTIVE_PROMOCODES.clear()
-        
+
         for code, data in json_data.items():
             try:
                 # Parse expiry date
@@ -298,7 +314,7 @@ def load_promocodes_from_file() -> bool:
                     expiry = datetime.fromisoformat(data["expiry"])
                 else:
                     expiry = data.get("expiry")
-                
+
                 # Convert used_by list back to set
                 used_by = set(data.get("used_by", []))
 
@@ -309,7 +325,7 @@ def load_promocodes_from_file() -> bool:
                         created_at = datetime.fromisoformat(created_at)
                     except ValueError:
                         created_at = None
-                
+
                 entry = {
                     "expiry": expiry,
                     "uses_left": data.get("uses_left", 0),
@@ -330,7 +346,7 @@ def load_promocodes_from_file() -> bool:
             except Exception as e:
                 log.error(f"Error parsing promocode {code}: {e}")
                 continue
-        
+
         LAST_LOAD_TIME = current_time
         try:
             LAST_FILE_MTIME = os.path.getmtime(PROMOCODES_FILE_PATH)
@@ -338,7 +354,7 @@ def load_promocodes_from_file() -> bool:
             pass
         log.info(f"Loaded {len(ACTIVE_PROMOCODES)} promocodes from {PROMOCODES_FILE_PATH}")
         return True
-        
+
     except json.JSONDecodeError as e:
         log.error(f"Invalid JSON in promocodes file: {e}")
         return False
@@ -346,17 +362,18 @@ def load_promocodes_from_file() -> bool:
         log.exception(f"Error loading promocodes from file: {e}")
         return False
 
+
 def is_valid_promocode(code: str, user_id: int) -> tuple[bool, str]:
     """
     Check if a promocode is valid for a user
-    
+
     Parameters
     ----------
     code : str
         The promocode to check
     user_id : int
         The Discord user ID
-        
+
     Returns
     -------
     tuple[bool, str]
@@ -364,45 +381,46 @@ def is_valid_promocode(code: str, user_id: int) -> tuple[bool, str]:
     """
     # Load latest promocodes from file
     load_promocodes_from_file()
-    
+
     code = code.upper().strip()
-    
+
     with MEM_LOCK:
         if code not in ACTIVE_PROMOCODES:
             return False, "❌ Invalid promocode. Please check your code and try again."
         promocode_data = ACTIVE_PROMOCODES[code]
-    
+
     # Check if expired
     expiry = promocode_data.get("expiry")
     if expiry and datetime.now(timezone.utc) > expiry:
         return False, "❌ This promocode has expired."
-    
+
     # Check if there are uses left
     uses_left = promocode_data.get("uses_left", 0)
     if uses_left <= 0:
         return False, "❌ This promocode has no uses remaining."
-    
+
     # Check if user has already used this code
     used_by = promocode_data.get("used_by", set())
     max_uses_per_user = promocode_data.get("max_uses_per_user", 1)
-    
+
     user_usage_count = sum(1 for uid in used_by if uid == user_id)
     if user_usage_count >= max_uses_per_user:
         return False, "❌ You have already used this promocode the maximum number of times."
-    
+
     return True, ""
+
 
 def mark_promocode_used(code: str, user_id: int) -> bool:
     """
     Mark a promocode as used by a user
-    
+
     Parameters
     ----------
     code : str
         The promocode
     user_id : int
         The Discord user ID
-        
+
     Returns
     -------
     bool
@@ -410,7 +428,7 @@ def mark_promocode_used(code: str, user_id: int) -> bool:
     """
     try:
         code = code.upper().strip()
-        
+
         with MEM_LOCK:
             if code not in ACTIVE_PROMOCODES:
                 log.error(f"Attempted to mark unknown promocode as used: {code}")
@@ -426,19 +444,20 @@ def mark_promocode_used(code: str, user_id: int) -> bool:
             # Decrease uses_left
             if promocode_data.get("uses_left", 0) > 0:
                 promocode_data["uses_left"] -= 1
-        
+
         # Save to file
         success = save_promocodes_to_file()
         if success:
             log.info(f"Marked promocode {code} as used by user {user_id}")
         else:
             log.error(f"Failed to save promocode usage for {code} by user {user_id}")
-        
+
         return success
-        
+
     except Exception as e:
         log.exception(f"Error marking promocode as used: {e}")
         return False
+
 
 def get_active_promocodes(
     include_expired: bool = False,
@@ -484,6 +503,7 @@ def get_active_promocodes(
         results[code] = data.copy()
 
     if sort_by:
+
         def sort_key(item: tuple[str, Dict[str, Any]]):
             k, v = item
             if sort_by == "code":
@@ -512,6 +532,7 @@ def get_active_promocodes(
         results = {k: v for k, v in sorted_items}
 
     return results
+
 
 def clean_expired_promocodes(archive: bool = True) -> int:
     """
@@ -564,32 +585,35 @@ def clean_expired_promocodes(archive: bool = True) -> int:
         log.exception(f"Error cleaning expired promocodes: {e}")
         return 0
 
+
 def get_promocode_rewards(code: str) -> Optional[Dict[str, Any]]:
     """
     Get the rewards for a promocode
-    
+
     Parameters
     ----------
     code : str
         The promocode
-        
+
     Returns
     -------
     Optional[Dict[str, Any]]
         The rewards dictionary, or None if code not found
     """
     load_promocodes_from_file()
-    
+
     code = code.upper().strip()
     with MEM_LOCK:
         promocode_data = ACTIVE_PROMOCODES.get(code)
-    
+
     if not promocode_data:
         return None
-    
+
     return promocode_data.get("rewards", {})
 
+
 # --- New helper and management functions ---
+
 
 def _serialize_promocode_entry(data: Dict[str, Any]) -> Dict[str, Any]:
     """Convert a promocode entry to a JSON-serializable dict, preserving metadata."""
@@ -603,10 +627,18 @@ def _serialize_promocode_entry(data: Dict[str, Any]) -> Dict[str, Any]:
         "uses_left": data.get("uses_left", 0),
         "max_uses_per_user": data.get("max_uses_per_user", 1),
         "rewards": data.get("rewards", {}),
-        "used_by": list(data.get("used_by", [])) if isinstance(data.get("used_by"), set) else data.get("used_by", []),
+        "used_by": (
+            list(data.get("used_by", []))
+            if isinstance(data.get("used_by"), set)
+            else data.get("used_by", [])
+        ),
     }
     if "created_at" in data:
-        result["created_at"] = data["created_at"].isoformat() if isinstance(data["created_at"], datetime) else data["created_at"]
+        result["created_at"] = (
+            data["created_at"].isoformat()
+            if isinstance(data["created_at"], datetime)
+            else data["created_at"]
+        )
     if "description" in data:
         result["description"] = data["description"]
     if "is_hidden" in data:
@@ -615,15 +647,17 @@ def _serialize_promocode_entry(data: Dict[str, Any]) -> Dict[str, Any]:
         result["created_by"] = data["created_by"]
     return result
 
+
 def _load_archive_data() -> Dict[str, Any]:
     try:
         if not os.path.exists(PROMOCODES_ARCHIVE_FILE_PATH):
             return {}
-        with open(PROMOCODES_ARCHIVE_FILE_PATH, 'r', encoding='utf-8') as f:
+        with open(PROMOCODES_ARCHIVE_FILE_PATH, "r", encoding="utf-8") as f:
             return json.load(f) or {}
     except Exception as e:
         log.warning(f"Failed to load archive data: {e}")
         return {}
+
 
 def _save_archive_data(data: Dict[str, Any]) -> bool:
     lock_file = None
@@ -634,7 +668,7 @@ def _save_archive_data(data: Dict[str, Any]) -> bool:
 
         # Acquire lock
         lock_file_path = f"{PROMOCODES_ARCHIVE_FILE_PATH}.lock"
-        lock_file = open(lock_file_path, 'w')
+        lock_file = open(lock_file_path, "w")
         try:
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
         except Exception:
@@ -643,13 +677,13 @@ def _save_archive_data(data: Dict[str, Any]) -> bool:
 
         # Write to temp file then move
         temp_path = f"{PROMOCODES_ARCHIVE_FILE_PATH}.tmp"
-        with open(temp_path, 'w', encoding='utf-8') as f:
+        with open(temp_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
             f.flush()
             os.fsync(f.fileno())
 
         # On Windows remove existing before rename
-        if os.name == 'nt' and os.path.exists(PROMOCODES_ARCHIVE_FILE_PATH):
+        if os.name == "nt" and os.path.exists(PROMOCODES_ARCHIVE_FILE_PATH):
             try:
                 os.remove(PROMOCODES_ARCHIVE_FILE_PATH)
             except OSError:
@@ -676,6 +710,7 @@ def _save_archive_data(data: Dict[str, Any]) -> bool:
                     os.remove(lock_file_path)
             except Exception:
                 pass
+
 
 def create_promocode(
     code: str,
@@ -723,6 +758,7 @@ def create_promocode(
         log.exception(f"Error creating promocode {code}: {e}")
         return False
 
+
 def update_promocode_uses(code: str, uses_to_add: int) -> Optional[int]:
     """Update the uses_left of an existing promocode by adding uses_to_add (can be negative).
 
@@ -743,6 +779,7 @@ def update_promocode_uses(code: str, uses_to_add: int) -> Optional[int]:
     except Exception as e:
         log.exception(f"Error updating uses for promocode {code}: {e}")
         return None
+
 
 def delete_promocode(code: str, archive: bool = True) -> bool:
     """Delete a promocode. If archive is True, move it to the archive file."""
@@ -769,6 +806,7 @@ def delete_promocode(code: str, archive: bool = True) -> bool:
     except Exception as e:
         log.exception(f"Error deleting promocode {code}: {e}")
         return False
+
 
 # Initialize promocodes on import
 try:

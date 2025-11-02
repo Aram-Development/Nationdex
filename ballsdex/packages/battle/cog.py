@@ -41,10 +41,7 @@ def gen_deck(balls) -> str:
     if not balls:
         return "Empty"
     return "\n".join(
-        [
-            f"- {ball.emoji} {ball.name} (HP: {ball.health} | DMG: {ball.attack})"
-            for ball in balls
-        ]
+        [f"- {ball.emoji} {ball.name} (HP: {ball.health} | DMG: {ball.attack})" for ball in balls]
     )
 
 
@@ -119,9 +116,7 @@ class Battle(commands.GroupCog):
 
         if guild_battle.author_ready and guild_battle.opponent_ready:
             if not (guild_battle.battle.p1_balls and guild_battle.battle.p2_balls):
-                await interaction.response.send_message(
-                    "Both players must add countryballs!"
-                )
+                await interaction.response.send_message("Both players must add countryballs!")
                 return
             new_view = create_disabled_buttons()
             battle_log = "\n".join(gen_battle(guild_battle.battle))
@@ -153,9 +148,7 @@ class Battle(commands.GroupCog):
                 content=f"{guild_battle.author.mention} vs {guild_battle.opponent.mention}",
                 embed=embed,
                 view=new_view,
-                attachments=[
-                    discord.File(io.StringIO(battle_log), filename="battle-log.txt")
-                ],
+                attachments=[discord.File(io.StringIO(battle_log), filename="battle-log.txt")],
             )
             self.battles[interaction.guild_id] = None
         else:
@@ -165,13 +158,9 @@ class Battle(commands.GroupCog):
                 f"Done! Waiting for the other player to press 'Ready'.", ephemeral=True
             )
 
-            author_emoji = (
-                ":white_check_mark:" if interaction.user == guild_battle.author else ""
-            )
+            author_emoji = ":white_check_mark:" if interaction.user == guild_battle.author else ""
             opponent_emoji = (
-                ":white_check_mark:"
-                if interaction.user == guild_battle.opponent
-                else ""
+                ":white_check_mark:" if interaction.user == guild_battle.opponent else ""
             )
 
             embed = discord.Embed(
@@ -191,9 +180,7 @@ class Battle(commands.GroupCog):
                 inline=True,
             )
 
-            await self.interactions[interaction.guild_id].edit_original_response(
-                embed=embed
-            )
+            await self.interactions[interaction.guild_id].edit_original_response(embed=embed)
 
     async def cancel_battle(self, interaction: discord.Interaction):
         guild_battle = self.battles.get(interaction.guild_id)
@@ -271,9 +258,7 @@ class Battle(commands.GroupCog):
         self.interactions[interaction.guild_id] = interaction
 
     @app_commands.command()
-    async def add(
-        self, interaction: discord.Interaction, countryball: BallInstanceTransform
-    ):
+    async def add(self, interaction: discord.Interaction, countryball: BallInstanceTransform):
         """
         Add a countryball to a battle. - Made by xen64
         """
@@ -349,9 +334,7 @@ class Battle(commands.GroupCog):
         )
 
     @app_commands.command()
-    async def remove(
-        self, interaction: discord.Interaction, countryball: BallInstanceTransform
-    ):
+    async def remove(self, interaction: discord.Interaction, countryball: BallInstanceTransform):
         """
         Remove a countryball from battle. - Made by xen64
         """

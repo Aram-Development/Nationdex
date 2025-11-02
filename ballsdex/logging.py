@@ -26,14 +26,14 @@ def init_logger(disable_rich: bool = False, debug: bool = False) -> logging.hand
         Path("logs") / "ballsdex.log",  # Try logs subdirectory
         Path("/tmp") / "ballsdex.log",  # Fallback to /tmp
     ]
-    
+
     for log_path in log_paths:
         try:
             # Ensure directory exists if using a subdirectory
             if isinstance(log_path, Path):
                 log_path.parent.mkdir(parents=True, exist_ok=True)
                 log_path = str(log_path)
-            
+
             file_handler = logging.handlers.RotatingFileHandler(
                 log_path, maxBytes=8**7, backupCount=8
             )
@@ -44,7 +44,7 @@ def init_logger(disable_rich: bool = False, debug: bool = False) -> logging.hand
         except (PermissionError, OSError) as e:
             # Continue to next path if this one fails
             continue
-    
+
     if file_handler is None:
         # Note: Logger not fully configured yet, but this will be logged after setup
         pass

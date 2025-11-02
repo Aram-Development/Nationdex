@@ -471,14 +471,17 @@ class BallSpawnView(View):
         if self.ballinstance:
             text += f"This {settings.collectible_name} was dropped by <@{self.og_id}>\n"
 
-        caught_message = _build_message(
-            settings.caught_messages,
-            settings.caught_messages_ptbr,
-            user=mention,
-            collectible=settings.collectible_name,
-            ball=self.name,
-            collectibles=settings.plural_collectible_name,
-        ) + " "
+        caught_message = (
+            _build_message(
+                settings.caught_messages,
+                settings.caught_messages_ptbr,
+                user=mention,
+                collectible=settings.collectible_name,
+                ball=self.name,
+                collectibles=settings.plural_collectible_name,
+            )
+            + " "
+        )
 
         return (
             caught_message

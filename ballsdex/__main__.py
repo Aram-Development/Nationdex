@@ -55,7 +55,10 @@ def parse_cli_flags(arguments: list[str]) -> CLIFlags:
     )
     parser.add_argument("--version", "-V", action="store_true", help="Display the bot's version")
     parser.add_argument(
-        "--config-file", type=Path, help="Set the path to config.toml", default=Path("./config.toml")
+        "--config-file",
+        type=Path,
+        help="Set the path to config.toml",
+        default=Path("./config.toml"),
     )
     parser.add_argument(
         "--reset-settings",

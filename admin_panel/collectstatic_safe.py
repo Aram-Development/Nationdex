@@ -24,9 +24,10 @@ from django.conf import settings
 # Monkey-patch the delete_file method to handle permission errors gracefully
 original_delete_file = CollectStaticCommand.delete_file
 
+
 def delete_file_with_permission_handling(self, path, prefixed_path, source_storage):
     """Wrapper that handles permission errors gracefully.
-    
+
     Django's collectstatic tries to delete files in STATIC_ROOT that don't exist
     in any source location. This is normal behavior to keep the directory clean.
     However, if we don't have permission to delete (e.g., files owned by host user),
@@ -42,43 +43,46 @@ def delete_file_with_permission_handling(self, path, prefixed_path, source_stora
             return False
         raise
 
+
 # Apply the monkey-patch at the class level
 CollectStaticCommand.delete_file = delete_file_with_permission_handling
+
 
 def fix_permissions(directory):
     """Try to fix permissions on a directory so the container user can write to it."""
     try:
         # Make directory writable by owner and group
         os.chmod(directory, stat.S_IRWXU | stat.S_IRWXG | stat.S_IROTH | stat.S_IXOTH)
-        
+
         # Try to recursively fix permissions (best effort)
         # Use find to change permissions on files and directories
         try:
             subprocess.run(
-                ['find', directory, '-type', 'd', '-exec', 'chmod', '775', '{}', '+'],
+                ["find", directory, "-type", "d", "-exec", "chmod", "775", "{}", "+"],
                 check=False,
-                stderr=subprocess.DEVNULL
+                stderr=subprocess.DEVNULL,
             )
             subprocess.run(
-                ['find', directory, '-type', 'f', '-exec', 'chmod', '664', '{}', '+'],
+                ["find", directory, "-type", "f", "-exec", "chmod", "664", "{}", "+"],
                 check=False,
-                stderr=subprocess.DEVNULL
+                stderr=subprocess.DEVNULL,
             )
         except Exception:
             pass  # Best effort only
     except Exception:
         pass  # Best effort only
 
+
 if __name__ == "__main__":
     # Fix permissions on static directory before running collectstatic
-    static_root = getattr(settings, 'STATIC_ROOT', 'static')
+    static_root = getattr(settings, "STATIC_ROOT", "static")
     if os.path.exists(static_root):
         fix_permissions(static_root)
-    
+
     # Ensure static directory exists
     os.makedirs(static_root, exist_ok=True)
     fix_permissions(static_root)
-    
+
     # Run collectstatic with the patched command
     try:
         execute_from_command_line(["manage.py", "collectstatic", "--no-input"])
@@ -90,4 +94,3 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Error running collectstatic: {e}")
         sys.exit(0)  # Continue anyway
-

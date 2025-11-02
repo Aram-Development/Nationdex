@@ -38,7 +38,7 @@ class BlacklistViewFormat(menus.ListPageSource):
         embed.add_field(name="Action Time", value=format_dt(blacklist.date, "R"), inline=True)
         if settings.admin_url and (player := await Player.get_or_none(discord_id=self.header)):
             embed.add_field(
-                name="\u200B",
+                name="\u200b",
                 value="[View history online]"
                 f"(<{settings.admin_url}/bd_models/player/{player.pk}/change/>)",
                 inline=False,
