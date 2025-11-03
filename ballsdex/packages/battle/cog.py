@@ -1,6 +1,4 @@
 import logging
-import random
-import sys
 from typing import TYPE_CHECKING, Dict
 from dataclasses import dataclass, field
 
@@ -8,12 +6,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-import asyncio
 import io
-
-from ballsdex.core.models import Ball
-from ballsdex.core.models import balls as countryballs
-from ballsdex.settings import settings
 
 from ballsdex.core.utils.transformers import BallInstanceTransform
 from ballsdex.packages.battle.xe_battle_lib import (
@@ -51,7 +44,11 @@ def update_embed(
     """Creates an embed for the battle setup phase."""
     embed = discord.Embed(
         title="Countryballs Battle Plan",
-        description="Add or remove countryballs you want to propose to the other player using the '/battle add' and '/battle remove' commands. Once you've finished, click the tick button to start the battle.",
+        description=(
+            "Add or remove countryballs you want to propose to the other player "
+            "using the '/battle add' and '/battle remove' commands. "
+            "Once you've finished, click the tick button to start the battle."
+        ),
         color=discord.Colour.blurple(),
     )
 
@@ -123,7 +120,10 @@ class Battle(commands.GroupCog):
 
             embed = discord.Embed(
                 title="Countryballs Battle Plan",
-                description=f"Battle between {guild_battle.author.mention} and {guild_battle.opponent.mention}",
+                description=(
+                    f"Battle between {guild_battle.author.mention} "
+                    f"and {guild_battle.opponent.mention}"
+                ),
                 color=discord.Color.green(),
             )
             embed.add_field(
@@ -155,7 +155,7 @@ class Battle(commands.GroupCog):
             # One player is ready, waiting for the other player
 
             await interaction.response.send_message(
-                f"Done! Waiting for the other player to press 'Ready'.", ephemeral=True
+                "Done! Waiting for the other player to press 'Ready'.", ephemeral=True
             )
 
             author_emoji = ":white_check_mark:" if interaction.user == guild_battle.author else ""
@@ -165,7 +165,11 @@ class Battle(commands.GroupCog):
 
             embed = discord.Embed(
                 title="Countryballs Battle Plan",
-                description="Add or remove countryballs you want to propose to the other player using the '/battle add' and '/battle remove' commands. Once you've finished, click the tick button to start the battle.",
+                description=(
+                    "Add or remove countryballs you want to propose to the other player "
+                    "using the '/battle add' and '/battle remove' commands. "
+                    "Once you've finished, click the tick button to start the battle."
+                ),
                 color=discord.Colour.blurple(),
             )
 
@@ -224,7 +228,10 @@ class Battle(commands.GroupCog):
         """
         if self.battles.get(interaction.guild_id):
             await interaction.response.send_message(
-                "You cannot create a new battle right now, as one is already ongoing in this server.",
+                (
+                    "You cannot create a new battle right now, "
+                    "as one is already ongoing in this server."
+                ),
                 ephemeral=True,
             )
             return
@@ -316,7 +323,11 @@ class Battle(commands.GroupCog):
         health_sign = "+" if countryball.health_bonus >= 0 else ""
 
         await interaction.response.send_message(
-            f"Added `#{countryball.id} {countryball.countryball.country} ({attack_sign}{countryball.attack_bonus}%/{health_sign}{countryball.health_bonus}%)`!",
+            (
+                f"Added `#{countryball.id} {countryball.countryball.country} "
+                f"({attack_sign}{countryball.attack_bonus}%/"
+                f"{health_sign}{countryball.health_bonus}%)`!"
+            ),
             ephemeral=True,
         )
 
@@ -387,7 +398,11 @@ class Battle(commands.GroupCog):
             health_sign = "+" if countryball.health_bonus >= 0 else ""
 
             await interaction.response.send_message(
-                f"Removed `#{countryball.id} {countryball.countryball.country} ({attack_sign}{countryball.attack_bonus}%/{health_sign}{countryball.health_bonus}%)`!",
+                (
+                    f"Removed `#{countryball.id} {countryball.countryball.country} "
+                    f"({attack_sign}{countryball.attack_bonus}%/"
+                    f"{health_sign}{countryball.health_bonus}%)`!"
+                ),
                 ephemeral=True,
             )
 
@@ -405,5 +420,5 @@ class Battle(commands.GroupCog):
             )
         else:
             await interaction.response.send_message(
-                f"That countryball is not in your battle deck!", ephemeral=True
+                "That countryball is not in your battle deck!", ephemeral=True
             )

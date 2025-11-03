@@ -39,7 +39,10 @@ def attack(current_ball, enemy_balls):
             f"{current_ball.owner}'s {current_ball.name} has killed {enemy.owner}'s {enemy.name}"
         )
     else:
-        gen_text = f"{current_ball.owner}'s {current_ball.name} has dealt {attack_dealt} damage to {enemy.owner}'s {enemy.name}"
+        gen_text = (
+            f"{current_ball.owner}'s {current_ball.name} has dealt {attack_dealt} "
+            f"damage to {enemy.owner}'s {enemy.name}"
+        )
     return gen_text
 
 
@@ -47,7 +50,10 @@ def random_events(p1_ball, p2_ball):
     if random.randint(0, 100) <= 30:
         return (
             True,
-            f"{p1_ball.owner}'s {p1_ball.name} has dodged the attack of {p2_ball.owner}'s {p2_ball.name}",
+            (
+                f"{p1_ball.owner}'s {p1_ball.name} has dodged the attack "
+                f"of {p2_ball.owner}'s {p2_ball.name}"
+            ),
         )
     else:
         return False, ""
@@ -72,7 +78,11 @@ def gen_battle(battle: BattleInstance):
 
                 event = random_events(p1_ball, p2_ball)
                 if event[0]:
-                    yield f"Turn {turn}: {p2_ball.owner}'s {p2_ball.name} missed dealing {get_damage(p2_ball)} damage to {p1_ball.owner}'s {p1_ball.name}"
+                    yield (
+                        f"Turn {turn}: {p2_ball.owner}'s {p2_ball.name} missed "
+                        f"dealing {get_damage(p2_ball)} damage to "
+                        f"{p1_ball.owner}'s {p1_ball.name}"
+                    )
                     turn += 1
                     yield f"Turn {turn}: {event[1]}"
                     continue
@@ -118,7 +128,11 @@ if __name__ == "__main__":
     )
 
     print(
-        f"Battle between {battle.p1_balls[0].owner} and {battle.p2_balls[0].owner} begins! - {battle.p1_balls[0].owner} begins"
+        (
+            f"Battle between {battle.p1_balls[0].owner} and "
+            f"{battle.p2_balls[0].owner} begins! - "
+            f"{battle.p1_balls[0].owner} begins"
+        )
     )
     for attack_text in gen_battle(battle):
         print(attack_text)
