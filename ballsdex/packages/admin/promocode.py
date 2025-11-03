@@ -349,7 +349,7 @@ class Promocode(app_commands.Group):
             await interaction.response.send_message(f"❌ {e}", ephemeral=True)
         except TypeError as e:
             await interaction.response.send_message(f"❌ {e}", ephemeral=True)
-        except Exception as e:
+        except Exception:
             await interaction.response.send_message(
                 "❌ An unexpected error occurred. Check logs for details.", ephemeral=True
             )
