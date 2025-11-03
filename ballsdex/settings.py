@@ -1,9 +1,8 @@
 import logging
 import sys
+import tomllib
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
-
-import tomllib
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -215,7 +214,6 @@ def read_settings(path: "Path"):
     settings.packages = content.get("packages") or [
         "ballsdex.packages.admin",
         "ballsdex.packages.balls",
-        "ballsdex.packages.battle",
         "ballsdex.packages.config",
         "ballsdex.packages.countryballs",
         "ballsdex.packages.arampacks",
@@ -327,7 +325,6 @@ url = "http://localhost:8000"
 packages = [
   "ballsdex.packages.admin",
   "ballsdex.packages.balls",
-  "ballsdex.packages.battle",
   "ballsdex.packages.config",
   "ballsdex.packages.countryballs",
   "ballsdex.packages.arampacks",
@@ -506,7 +503,6 @@ plural-collectible-name = "countryballs"
 packages = [
   "ballsdex.packages.admin",
   "ballsdex.packages.balls",
-  "ballsdex.packages.battle",
   "ballsdex.packages.config",
   "ballsdex.packages.countryballs",
   "ballsdex.packages.arampacks",

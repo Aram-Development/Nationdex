@@ -1,27 +1,26 @@
-import discord
+import asyncio
 import logging
 import random
-import asyncio
-import time
-import re
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
+from typing import TYPE_CHECKING
+
+import discord
 from discord import app_commands
 from discord.ext import commands
-from ballsdex.settings import settings
+
+from ballsdex.core.models import BallInstance, Player, balls, specials
 from ballsdex.core.utils.paginator import FieldPageSource, Pages
-from ballsdex.core.models import Player, BallInstance, Ball, Special, balls, specials
-from ballsdex.packages.arampacks.rarity import rarity_tiers as global_rarity_tiers
 from ballsdex.packages.arampacks.active import (
-    load_promocodes_from_file,
-    is_valid_promocode,
-    mark_promocode_used,
-    get_active_promocodes,
     ACTIVE_PROMOCODES,
     clean_expired_promocodes,
+    get_active_promocodes,
     get_promocode_rewards,
+    is_valid_promocode,
+    load_promocodes_from_file,
+    mark_promocode_used,
 )
-
-from typing import TYPE_CHECKING, Optional, Dict, List, Union, Set, Tuple, Any, cast
+from ballsdex.packages.arampacks.rarity import rarity_tiers as global_rarity_tiers
+from ballsdex.settings import settings
 
 if TYPE_CHECKING:
     from ballsdex.core.bot import BallsDexBot
@@ -60,7 +59,10 @@ class PromocodeModal(discord.ui.Modal):
             valid_chars = set("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-")
             if not all(c in valid_chars for c in promocode):
                 await interaction.response.send_message(
-                    "❌ Promocode contains invalid characters. Please use only letters, numbers, underscores, and hyphens.",
+                    (
+                        "❌ Promocode contains invalid characters. "
+                        "Please use only letters, numbers, underscores, and hyphens."
+                    ),
                     ephemeral=True,
                 )
                 return
@@ -97,19 +99,19 @@ class AramPacks(commands.Cog):
         """Initialize promocodes once collectibles are loaded"""
         await self.bot.wait_until_ready()
 
-        log.info(f"Initializing AramPacks system...")
+        log.info("Initializing AramPacks system...")
 
         # Try to load promocodes from file first
         try:
-            log.info(f"Attempting to load promocodes from file...")
+            log.info("Attempting to load promocodes from file...")
             success = load_promocodes_from_file()
 
             if success:
-                log.info(f"Successfully loaded promocodes from file")
+                log.info("Successfully loaded promocodes from file")
                 # Log the loaded promocodes for debugging
                 log.info(f"Loaded promocodes: {list(ACTIVE_PROMOCODES.keys())}")
             else:
-                log.warning(f"Failed to load promocodes from file. Using default in-memory codes.")
+                log.warning("Failed to load promocodes from file. Using default in-memory codes.")
                 # We'll continue with default codes in memory
         except Exception as e:
             log.exception(f"Error loading promocodes from file: {e}")
@@ -117,7 +119,7 @@ class AramPacks(commands.Cog):
 
         # Verify ACTIVE_PROMOCODES has expected content
         if not ACTIVE_PROMOCODES:
-            log.error(f"ACTIVE_PROMOCODES dictionary is empty after initialization!")
+            log.error("ACTIVE_PROMOCODES dictionary is empty after initialization!")
         else:
             log.info(
                 f"ACTIVE_PROMOCODES contains {len(ACTIVE_PROMOCODES)} codes after initialization"
@@ -140,12 +142,16 @@ class AramPacks(commands.Cog):
             await asyncio.sleep(1)
             retry_count += 1
             log.debug(
-                f"Waiting for {settings.collectible_name} data, attempt {retry_count}/{max_retries}"
+                (
+                    f"Waiting for {settings.collectible_name} data, "
+                    f"attempt {retry_count}/{max_retries}"
+                )
             )
 
         if not balls:
             log.warning(
-                f"{settings.collectible_name.capitalize()} data not loaded after waiting, promocodes may not work correctly"
+                f"{settings.collectible_name.capitalize()} data not loaded after waiting, "
+                "promocodes may not work correctly"
             )
             # Set the ball_loaded event anyway to avoid blocking the bot
             self.ball_loaded.set()
@@ -161,7 +167,10 @@ class AramPacks(commands.Cog):
             all_promocodes = get_active_promocodes(include_expired=True)
             active_promocodes = get_active_promocodes(include_expired=False)
             log.info(
-                f"AramPacks system initialized with {len(active_promocodes)} active codes out of {len(all_promocodes)} total"
+                (
+                    f"AramPacks system initialized with {len(active_promocodes)} "
+                    f"active codes out of {len(all_promocodes)} total"
+                )
             )
 
             # Clean expired promocodes
@@ -171,12 +180,13 @@ class AramPacks(commands.Cog):
         except Exception as e:
             log.exception(f"Error getting promocode counts: {e}")
             log.info(
-                f"AramPacks system initialized with errors. Some features may not work correctly."
+                "AramPacks system initialized with errors. "
+                "Some features may not work correctly."
             )
 
         # Force reload one more time to ensure we have the latest data
         try:
-            log.info(f"Performing final promocode reload to ensure latest data...")
+            log.info("Performing final promocode reload to ensure latest data...")
             load_promocodes_from_file()
             log.info(f"Final promocode list: {list(ACTIVE_PROMOCODES.keys())}")
         except Exception as e:
@@ -312,12 +322,17 @@ class AramPacks(commands.Cog):
 
         Behavior
         --------
-        Presents a modal for the user to enter a promocode, checks if the collectible data is loaded,
-        and handles the redemption process. Responds with an ephemeral message if the system is not ready.
+        Presents a modal for the user to enter a promocode, checks if the
+        collectible data is loaded, and handles the redemption process.
+        Responds with an ephemeral message if the system is not ready.
         """
         if not self.ball_loaded.is_set():
             await interaction.response.send_message(
-                f"❌ {settings.bot_name} is still initializing {settings.collectible_name} data. Please try again in a few moments.",
+                (
+                    f"❌ {settings.bot_name} is still initializing "
+                    f"{settings.collectible_name} data. "
+                    "Please try again in a few moments."
+                ),
                 ephemeral=True,
             )
             return
@@ -461,7 +476,7 @@ class AramPacks(commands.Cog):
         try:
             embed = discord.Embed(
                 title="🎉 Promocode Redeemed Successfully!",
-                description=f"You received:\n" + "\n".join(reward_text),
+                description="You received:\n" + "\n".join(reward_text),
                 color=discord.Color.green(),
             )
             embed.set_footer(text=f"Ball ID: #{ball_instance.pk:0X}")
@@ -473,8 +488,10 @@ class AramPacks(commands.Cog):
             log.exception(f"Error sending success message for promocode redemption: {e}")
             # Try a simple text message as fallback
             try:
-                simple_message = f"🎉 Promocode redeemed! You received: {' | '.join(reward_text)}"
+                simple_message = (
+                    "🎉 Promocode redeemed! You received: " f"{' | '.join(reward_text)}"
+                )
                 await interaction.response.send_message(simple_message, ephemeral=True)
             except Exception:
                 # If we can't send any message, just log it
-                log.error(f"Could not send any response message for promocode redemption")
+                log.error("Could not send any response message for promocode redemption")

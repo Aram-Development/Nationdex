@@ -8,6 +8,7 @@ import sys
 import time
 from pathlib import Path
 from signal import SIGTERM
+from tomllib import TOMLDecodeError
 
 import discord
 import sentry_sdk
@@ -16,7 +17,6 @@ from discord.ext.commands import when_mentioned_or
 from rich import print
 from sentry_sdk.integrations.asyncio import AsyncioIntegration
 from tortoise import Tortoise
-from tomllib import TOMLDecodeError
 
 from ballsdex import __version__ as bot_version
 from ballsdex.core.bot import BallsDexBot

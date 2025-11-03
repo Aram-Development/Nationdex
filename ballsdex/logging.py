@@ -41,7 +41,7 @@ def init_logger(disable_rich: bool = False, debug: bool = False) -> logging.hand
             file_handler.setFormatter(formatter)
             # Note: Logging here might not work yet, but handler creation succeeded
             break
-        except (PermissionError, OSError) as e:
+        except (PermissionError, OSError):
             # Continue to next path if this one fails
             continue
 

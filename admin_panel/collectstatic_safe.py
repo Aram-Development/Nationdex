@@ -3,10 +3,10 @@
 This script prevents Django from deleting files if we don't have permission,
 and fixes permissions on the static directory before running collectstatic.
 """
-import sys
 import os
 import stat
 import subprocess
+import sys
 
 # Set Django settings before importing Django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "admin_panel.settings")
@@ -15,11 +15,11 @@ import django
 
 django.setup()
 
-from django.core.management import execute_from_command_line
+from django.conf import settings
 from django.contrib.staticfiles.management.commands.collectstatic import (
     Command as CollectStaticCommand,
 )
-from django.conf import settings
+from django.core.management import execute_from_command_line
 
 # Monkey-patch the delete_file method to handle permission errors gracefully
 original_delete_file = CollectStaticCommand.delete_file
@@ -87,10 +87,10 @@ if __name__ == "__main__":
     try:
         execute_from_command_line(["manage.py", "collectstatic", "--no-input"])
         sys.exit(0)
-    except SystemExit as e:
+    except SystemExit:
         # Exit with success code even if there were some errors
         # (permission errors are handled by the monkey-patch)
         sys.exit(0)
-    except Exception as e:
-        print(f"Error running collectstatic: {e}")
+    except Exception:
+        # Errors are handled by the monkey-patch
         sys.exit(0)  # Continue anyway

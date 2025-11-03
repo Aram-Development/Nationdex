@@ -1,5 +1,5 @@
-from typing import TYPE_CHECKING
 import logging
+from typing import TYPE_CHECKING
 
 from ballsdex.packages.arampacks.cog import AramPacks
 from ballsdex.settings import settings

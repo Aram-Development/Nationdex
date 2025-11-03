@@ -3,8 +3,8 @@
 # You should copy the production.example.py file as "production.py" and place your settings there
 # That file will not be tracked by git
 
-from pathlib import Path
 import os
+from pathlib import Path
 from urllib.parse import urlparse
 
 import dj_database_url

@@ -1,28 +1,28 @@
-import discord
 import json
 import logging
 import os
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
+from typing import TYPE_CHECKING, Literal, Optional
+
+import discord
 from discord import app_commands
-from discord.ext import commands
-from ballsdex.settings import settings
+
+from ballsdex.core.models import balls, specials
 from ballsdex.core.utils.paginator import FieldPageSource, Pages
 
 # Import the promocode active module
 from ballsdex.packages.arampacks.active import (
     ACTIVE_PROMOCODES,
-    save_promocodes_to_file,
+    PROMOCODES_FILE_PATH,
+    clean_expired_promocodes,
     create_promocode,
-    update_promocode_uses,
     delete_promocode,
     get_active_promocodes,
     load_promocodes_from_file,
-    PROMOCODES_FILE_PATH,
-    clean_expired_promocodes,
+    save_promocodes_to_file,
+    update_promocode_uses,
 )
-from ballsdex.core.models import Ball, balls, specials
-
-from typing import TYPE_CHECKING, Optional, Union, Dict, Any, List, Literal
+from ballsdex.settings import settings
 
 if TYPE_CHECKING:
     from ballsdex.core.bot import BallsDexBot
@@ -103,7 +103,10 @@ class Promocode(app_commands.Group):
                     )
                 else:
                     await interaction.followup.send(
-                        f"❌ Failed to create promocode file at {PROMOCODES_FILE_PATH}. Check permissions.",
+                        (
+                            f"❌ Failed to create promocode file at "
+                            f"{PROMOCODES_FILE_PATH}. Check permissions."
+                        ),
                         ephemeral=True,
                     )
                     return
@@ -111,7 +114,10 @@ class Promocode(app_commands.Group):
             # Check if the file is readable
             if not os.access(PROMOCODES_FILE_PATH, os.R_OK):
                 await interaction.followup.send(
-                    f"❌ Cannot read promocode file at {PROMOCODES_FILE_PATH}. Check file permissions.",
+                    (
+                        f"❌ Cannot read promocode file at "
+                        f"{PROMOCODES_FILE_PATH}. Check file permissions."
+                    ),
                     ephemeral=True,
                 )
                 return
@@ -125,7 +131,7 @@ class Promocode(app_commands.Group):
                 # Create embed for better visual presentation
                 embed = discord.Embed(
                     title="✅ Promocode Database Synced",
-                    description=f"Successfully synced promocode database with file.",
+                    description="Successfully synced promocode database with file.",
                     color=discord.Color.green(),
                 )
                 embed.add_field(
@@ -143,7 +149,7 @@ class Promocode(app_commands.Group):
                 # Create error embed
                 embed = discord.Embed(
                     title="❌ Sync Failed",
-                    description=f"Failed to sync promocode database with file.",
+                    description="Failed to sync promocode database with file.",
                     color=discord.Color.red(),
                 )
                 embed.add_field(
@@ -170,7 +176,7 @@ class Promocode(app_commands.Group):
         except PermissionError as e:
             log.error(f"Permission error accessing promocode file: {e}")
             await interaction.followup.send(
-                f"❌ Permission error accessing promocode file. Check file permissions.",
+                "❌ Permission error accessing promocode file. " "Check file permissions.",
                 ephemeral=True,
             )
         except Exception as e:
@@ -267,7 +273,10 @@ class Promocode(app_commands.Group):
             # Check if specials dictionary is populated
             if not specials:
                 await interaction.response.send_message(
-                    "❌ Cannot create promocode with special event: special events data not loaded yet.",
+                    (
+                        "❌ Cannot create promocode with special event: "
+                        "special events data not loaded yet."
+                    ),
                     ephemeral=True,
                 )
                 return
@@ -297,7 +306,7 @@ class Promocode(app_commands.Group):
             ):
                 log.warning(f"Failed to create promocode {code}")
                 await interaction.response.send_message(
-                    f"❌ Failed to create promocode. Check logs for details.", ephemeral=True
+                    "❌ Failed to create promocode. Check logs for details.", ephemeral=True
                 )
                 return
 
@@ -343,7 +352,7 @@ class Promocode(app_commands.Group):
         except Exception as e:
             log.exception(f"Unexpected error occurred while creating promocode {code}: {e}")
             await interaction.response.send_message(
-                f"❌ An unexpected error occurred. Check logs for details.", ephemeral=True
+                "❌ An unexpected error occurred. Check logs for details.", ephemeral=True
             )
 
     @app_commands.command(name="update")
@@ -390,7 +399,7 @@ class Promocode(app_commands.Group):
             if new_uses is None:
                 log.warning(f"Failed to update promocode {code}")
                 await interaction.response.send_message(
-                    f"❌ Failed to update promocode. Check logs for details.", ephemeral=True
+                    "❌ Failed to update promocode. Check logs for details.", ephemeral=True
                 )
                 return
 
@@ -432,7 +441,8 @@ class Promocode(app_commands.Group):
         Parameters
         ----------
         code: The promocode to delete
-        archive: Whether to archive the promocode instead of permanently deleting it (default: True)
+        archive: Whether to archive the promocode instead of permanently
+                 deleting it (default: True)
         """
         if not interaction.user.guild_permissions.administrator:
             await interaction.response.send_message(
@@ -496,7 +506,7 @@ class Promocode(app_commands.Group):
             if not delete_promocode(code, archive=archive):
                 log.warning(f"Failed to delete promocode {code}")
                 await interaction.followup.send(
-                    f"❌ Failed to delete promocode. Check logs for details.", ephemeral=True
+                    "❌ Failed to delete promocode. Check logs for details.", ephemeral=True
                 )
                 return
 
@@ -550,7 +560,8 @@ class Promocode(app_commands.Group):
 
         Parameters
         ----------
-        archive: Whether to archive cleaned promocodes instead of permanently deleting them (default: True)
+        archive: Whether to archive cleaned promocodes instead of permanently
+                 deleting them (default: True)
         """
         if not interaction.user.guild_permissions.administrator:
             await interaction.response.send_message(
@@ -570,9 +581,6 @@ class Promocode(app_commands.Group):
                 )
                 return
 
-            # Get count of promocodes before cleaning
-            before_count = len(ACTIVE_PROMOCODES)
-
             try:
                 # Clean expired promocodes
                 cleaned_count = clean_expired_promocodes(archive=archive)
@@ -584,7 +592,10 @@ class Promocode(app_commands.Group):
                     # Create success embed
                     embed = discord.Embed(
                         title="✅ Expired Promocodes Cleaned",
-                        description=f"Successfully cleaned {cleaned_count} expired or depleted promocodes.",
+                        description=(
+                            f"Successfully cleaned {cleaned_count} "
+                            f"expired or depleted promocodes."
+                        ),
                         color=discord.Color.green(),
                     )
                     embed.add_field(
@@ -604,7 +615,8 @@ class Promocode(app_commands.Group):
             except PermissionError as e:
                 log.error(f"Permission error while cleaning promocodes: {e}")
                 await interaction.followup.send(
-                    f"❌ Permission error: Cannot access promocode file. Check file permissions.",
+                    "❌ Permission error: Cannot access promocode file. "
+                    "Check file permissions.",
                     ephemeral=True,
                 )
             except OSError as e:
@@ -671,7 +683,10 @@ class Promocode(app_commands.Group):
                 # Check if there are any promocodes at all
                 if not ACTIVE_PROMOCODES:
                     await interaction.followup.send(
-                        "No promocodes found in the system. Use `/promocode create` to create one.",
+                        (
+                            "No promocodes found in the system. "
+                            "Use `/promocode create` to create one."
+                        ),
                         ephemeral=True,
                     )
                 else:
@@ -690,7 +705,11 @@ class Promocode(app_commands.Group):
                         status = "active"
 
                     await interaction.followup.send(
-                        f"No {status} promocodes found with the current filters. There are {len(ACTIVE_PROMOCODES)} total promocodes in the system.",
+                        (
+                            f"No {status} promocodes found with the current filters. "
+                            f"There are {len(ACTIVE_PROMOCODES)} total promocodes "
+                            f"in the system."
+                        ),
                         ephemeral=True,
                     )
                 return
@@ -792,7 +811,10 @@ class Promocode(app_commands.Group):
                     )
                 else:
                     await interaction.followup.send(
-                        "No active promocodes found. Try with different filter options to see more promocodes.",
+                        (
+                            "No active promocodes found. Try with different filter "
+                            "options to see more promocodes."
+                        ),
                         ephemeral=True,
                     )
                 return

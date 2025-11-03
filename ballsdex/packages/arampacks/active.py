@@ -1,13 +1,12 @@
+import fcntl
 import json
 import logging
 import os
-import random
 import time
-import fcntl
-from pathlib import Path
+from datetime import datetime, timezone
 from threading import RLock
-from datetime import datetime, timezone, timedelta
-from typing import Dict, Any, Optional, Set, List, Union
+from typing import Any, Dict, List, Optional
+
 from ballsdex.settings import settings
 
 # Create a custom logger that logs to a dedicated file and console, but not to ballsdex.log
@@ -138,7 +137,7 @@ def save_promocodes_to_file() -> bool:
                 lock_file = open(lock_file_path, "w")
                 fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
                 lock_acquired = True
-            except (IOError, OSError) as e:
+            except (IOError, OSError):
                 if lock_file:
                     lock_file.close()
                     lock_file = None
