@@ -101,9 +101,6 @@ class Promocode(app_commands.Group):
             # Check if the file exists first
             if not os.path.exists(PROMOCODES_FILE_PATH):
                 # Create a default file if it doesn't exist
-                log.warning(
-                    f"Promocode file not found at {PROMOCODES_FILE_PATH}. Creating a new file."
-                )
                 if save_promocodes_to_file():
                     await interaction.followup.send(
                         f"✅ Created new promocode file at {PROMOCODES_FILE_PATH}.", ephemeral=True
@@ -170,24 +167,20 @@ class Promocode(app_commands.Group):
 
                 await interaction.followup.send(embed=embed, ephemeral=True)
         except FileNotFoundError:
-            log.error("Promocode file not found")
             await interaction.followup.send(
                 "❌ Promocode file not found. The system will use default in-memory codes.",
                 ephemeral=True,
             )
         except json.JSONDecodeError as e:
-            log.error(f"Error decoding JSON from promocode file: {e}")
             await interaction.followup.send(
                 f"❌ Invalid promocode file format. Error: {str(e)[:100]}", ephemeral=True
             )
-        except PermissionError as e:
-            log.error(f"Permission error accessing promocode file: {e}")
+        except PermissionError:
             await interaction.followup.send(
                 "❌ Permission error accessing promocode file. " "Check file permissions.",
                 ephemeral=True,
             )
         except Exception as e:
-            log.exception(f"Error syncing promocode database: {e}")
             await interaction.followup.send(
                 f"❌ An unexpected error occurred while syncing the database: {str(e)[:100]}",
                 ephemeral=True,
@@ -314,7 +307,6 @@ class Promocode(app_commands.Group):
                 is_hidden=is_hidden,
                 created_by=f"{interaction.user.name} ({interaction.user.id})",
             ):
-                log.warning(f"Failed to create promocode {code}")
                 await interaction.response.send_message(
                     "❌ Failed to create promocode. Check logs for details.", ephemeral=True
                 )
@@ -354,13 +346,10 @@ class Promocode(app_commands.Group):
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
         except ValueError as e:
-            log.error(f"ValueError occurred while creating promocode {code}: {e}")
             await interaction.response.send_message(f"❌ {e}", ephemeral=True)
         except TypeError as e:
-            log.error(f"TypeError occurred while creating promocode {code}: {e}")
             await interaction.response.send_message(f"❌ {e}", ephemeral=True)
         except Exception as e:
-            log.exception(f"Unexpected error occurred while creating promocode {code}: {e}")
             await interaction.response.send_message(
                 "❌ An unexpected error occurred. Check logs for details.", ephemeral=True
             )
@@ -410,7 +399,6 @@ class Promocode(app_commands.Group):
             new_uses = update_promocode_uses(code, uses_to_add)
 
             if new_uses is None:
-                log.warning(f"Failed to update promocode {code}")
                 await interaction.response.send_message(
                     "❌ Failed to update promocode. Check logs for details.", ephemeral=True
                 )
@@ -438,7 +426,6 @@ class Promocode(app_commands.Group):
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
         except Exception as e:
-            log.exception(f"Error updating promocode {code}: {e}")
             await interaction.response.send_message(
                 f"❌ An error occurred while updating the promocode: {str(e)}", ephemeral=True
             )
@@ -520,7 +507,6 @@ class Promocode(app_commands.Group):
 
             # Delete the promocode using the function from active.py
             if not delete_promocode(code, archive=archive):
-                log.warning(f"Failed to delete promocode {code}")
                 await interaction.followup.send(
                     "❌ Failed to delete promocode. Check logs for details.", ephemeral=True
                 )
@@ -562,7 +548,6 @@ class Promocode(app_commands.Group):
 
             await interaction.followup.send(embed=embed, ephemeral=True)
         except Exception as e:
-            log.exception(f"Error deleting promocode {code}: {e}")
             await interaction.followup.send(
                 f"❌ An unexpected error occurred while deleting the promocode: {str(e)[:100]}",
                 ephemeral=True,
@@ -594,7 +579,6 @@ class Promocode(app_commands.Group):
         try:
             # Ensure promocodes are loaded first
             if not ACTIVE_PROMOCODES and not load_promocodes_from_file():
-                log.error("Failed to load promocodes before cleaning")
                 await interaction.followup.send(
                     "❌ Failed to load promocodes. Check logs for details.", ephemeral=True
                 )
@@ -631,30 +615,25 @@ class Promocode(app_commands.Group):
                     await interaction.followup.send(
                         "✅ No expired or depleted promocodes to clean.", ephemeral=True
                     )
-            except PermissionError as e:
-                log.error(f"Permission error while cleaning promocodes: {e}")
+            except PermissionError:
                 await interaction.followup.send(
                     "❌ Permission error: Cannot access promocode file. "
                     "Check file permissions.",
                     ephemeral=True,
                 )
             except OSError as e:
-                log.error(f"OS error while cleaning promocodes: {e}")
                 await interaction.followup.send(
                     f"❌ File system error: {str(e)[:100]}", ephemeral=True
                 )
             except json.JSONDecodeError as e:
-                log.error(f"JSON decode error while cleaning promocodes: {e}")
                 await interaction.followup.send(
                     f"❌ Invalid promocode file format. Error: {str(e)[:100]}", ephemeral=True
                 )
             except Exception as e:
-                log.error(f"Error in clean_expired_promocodes function: {e}")
                 await interaction.followup.send(
                     f"❌ Failed to clean expired promocodes: {str(e)[:100]}", ephemeral=True
                 )
         except Exception as e:
-            log.exception(f"Unexpected error cleaning expired promocodes: {e}")
             await interaction.followup.send(
                 f"❌ An unexpected error occurred while cleaning promocodes: {str(e)[:100]}",
                 ephemeral=True,
@@ -810,8 +789,6 @@ class Promocode(app_commands.Group):
                         )
                     )
                 except Exception as e:
-                    # Handle errors for individual promocodes
-                    log.error(f"Error processing promocode {code}: {e}")
                     entries.append(
                         (f"{code} - Error", f"Could not process this promocode: {str(e)[:100]}")
                     )
@@ -874,7 +851,6 @@ class Promocode(app_commands.Group):
             )
             await pages.start()
         except Exception as e:
-            log.exception(f"Error listing promocodes: {e}")
             await interaction.followup.send(
                 f"❌ An error occurred while listing promocodes: {str(e)[:100]}", ephemeral=True
             )

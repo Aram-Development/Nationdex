@@ -71,8 +71,7 @@ class PromocodeModal(discord.ui.Modal):
 
             # Process the promocode
             await self.cog.process_promocode(interaction, promocode)
-        except Exception as e:
-            log.exception(f"Error in promocode modal submission: {e}")
+        except Exception:
             try:
                 await interaction.response.send_message(
                     "❌ An error occurred while processing your promocode. Please try again later.",
@@ -101,40 +100,12 @@ class AramPacks(commands.Cog):
         """Initialize promocodes once collectibles are loaded"""
         await self.bot.wait_until_ready()
 
-        log.info("Initializing AramPacks system...")
-
         # Try to load promocodes from file first
         try:
-            log.info("Attempting to load promocodes from file...")
-            success = load_promocodes_from_file()
-
-            if success:
-                log.info("Successfully loaded promocodes from file")
-                # Log the loaded promocodes for debugging
-                log.info(f"Loaded promocodes: {list(ACTIVE_PROMOCODES.keys())}")
-            else:
-                log.warning("Failed to load promocodes from file. Using default in-memory codes.")
-                # We'll continue with default codes in memory
-        except Exception as e:
-            log.exception(f"Error loading promocodes from file: {e}")
+            load_promocodes_from_file()
+        except Exception:
             # We'll continue with default codes in memory
-
-        # Verify ACTIVE_PROMOCODES has expected content
-        if not ACTIVE_PROMOCODES:
-            log.error("ACTIVE_PROMOCODES dictionary is empty after initialization!")
-        else:
-            log.info(
-                f"ACTIVE_PROMOCODES contains {len(ACTIVE_PROMOCODES)} codes after initialization"
-            )
-
-        # Check for specific promocodes
-        for expected_code in ["WELCOMETONATIONDEX", "WELCOMETOPLEASUREDOME"]:
-            if expected_code in ACTIVE_PROMOCODES:
-                log.info(f"Found expected promocode: {expected_code}")
-            else:
-                log.warning(f"Expected promocode not found: {expected_code}")
-
-        log.info(f"Waiting for {settings.collectible_name} data to load...")
+            pass
 
         # Make sure balls are loaded
         retry_count = 0
@@ -143,56 +114,20 @@ class AramPacks(commands.Cog):
         while not balls and retry_count < max_retries:
             await asyncio.sleep(1)
             retry_count += 1
-            log.debug(
-                (
-                    f"Waiting for {settings.collectible_name} data, "
-                    f"attempt {retry_count}/{max_retries}"
-                )
-            )
 
         if not balls:
-            log.warning(
-                f"{settings.collectible_name.capitalize()} data not loaded after waiting, "
-                "promocodes may not work correctly"
-            )
             # Set the ball_loaded event anyway to avoid blocking the bot
             self.ball_loaded.set()
             return
-        else:
-            log.info(f"Successfully loaded {len(balls)} {settings.collectible_name} items")
 
         # Set the ball_loaded event
         self.ball_loaded.set()
 
-        # Get counts for logging
+        # Get counts and clean expired promocodes
         try:
-            all_promocodes = get_active_promocodes(include_expired=True)
-            active_promocodes = get_active_promocodes(include_expired=False)
-            log.info(
-                (
-                    f"AramPacks system initialized with {len(active_promocodes)} "
-                    f"active codes out of {len(all_promocodes)} total"
-                )
-            )
-
-            # Clean expired promocodes
-            cleaned = clean_expired_promocodes()
-            if cleaned:
-                log.info(f"Cleaned {cleaned} expired promocodes")
-        except Exception as e:
-            log.exception(f"Error getting promocode counts: {e}")
-            log.info(
-                "AramPacks system initialized with errors. "
-                "Some features may not work correctly."
-            )
-
-        # Force reload one more time to ensure we have the latest data
-        try:
-            log.info("Performing final promocode reload to ensure latest data...")
-            load_promocodes_from_file()
-            log.info(f"Final promocode list: {list(ACTIVE_PROMOCODES.keys())}")
-        except Exception as e:
-            log.error(f"Error in final promocode reload: {e}")
+            clean_expired_promocodes()
+        except Exception:
+            pass
 
     @app_commands.command()
     @app_commands.checks.cooldown(1, 60, key=lambda i: i.user.id)
@@ -354,7 +289,6 @@ class AramPacks(commands.Cog):
     async def process_promocode(self, interaction: discord.Interaction, code: str):
         """Process the submitted promocode and grant rewards if valid"""
         user_id = interaction.user.id
-        log.info(f"User {user_id} attempting to redeem promocode")
 
         # Normalize the code
         try:
@@ -364,8 +298,7 @@ class AramPacks(commands.Cog):
                     "❌ Promocode cannot be empty. Please enter a valid code.", ephemeral=True
                 )
                 return
-        except Exception as e:
-            log.error(f"Error normalizing promocode: {e}")
+        except Exception:
             await interaction.response.send_message("❌ Invalid promocode format.", ephemeral=True)
             return
 
@@ -378,10 +311,7 @@ class AramPacks(commands.Cog):
         # Get or create player
         try:
             player, created = await Player.get_or_create(discord_id=user_id)
-            if created:
-                log.info(f"Created new player for user {user_id}")
-        except Exception as e:
-            log.exception(f"Error getting or creating player for user {user_id}: {e}")
+        except Exception:
             await interaction.response.send_message(
                 "❌ Database error occurred. Please try again later.", ephemeral=True
             )
@@ -395,8 +325,7 @@ class AramPacks(commands.Cog):
                     "❌ This promocode has no rewards configured.", ephemeral=True
                 )
                 return
-        except Exception as e:
-            log.exception(f"Error getting promocode rewards for {code}: {e}")
+        except Exception:
             await interaction.response.send_message(
                 "❌ Error retrieving promocode rewards.", ephemeral=True
             )
@@ -413,9 +342,6 @@ class AramPacks(commands.Cog):
             if specific_ball_id:
                 # Give specific ball
                 if specific_ball_id not in balls:
-                    log.error(
-                        f"Promocode {code} references non-existent ball ID: {specific_ball_id}"
-                    )
                     await interaction.response.send_message(
                         "❌ This promocode is misconfigured. Please contact support.",
                         ephemeral=True,
@@ -465,8 +391,7 @@ class AramPacks(commands.Cog):
                 if special_obj.catch_phrase:
                     reward_text.append(f"*{special_obj.catch_phrase}*")
 
-        except Exception as e:
-            log.exception(f"Error processing promocode rewards for {code}: {e}")
+        except Exception:
             await interaction.response.send_message(
                 "❌ Error processing rewards. Please try again later.", ephemeral=True
             )
@@ -474,13 +399,11 @@ class AramPacks(commands.Cog):
 
         # Mark promocode as used
         try:
-            success = mark_promocode_used(code, user_id)
-            if not success:
-                log.error(f"Failed to mark promocode {code} as used for user {user_id}")
-                # We'll continue anyway since the reward was already given
-        except Exception as e:
-            log.exception(f"Error marking promocode as used: {e}")
+            mark_promocode_used(code, user_id)
+            # Continue anyway since the reward was already given
+        except Exception:
             # Continue anyway
+            pass
 
         # Send success message
         try:
@@ -492,10 +415,8 @@ class AramPacks(commands.Cog):
             embed.set_footer(text=f"Ball ID: #{ball_instance.pk:0X}")
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
-            log.info(f"Successfully processed promocode {code} for user {user_id}")
 
-        except Exception as e:
-            log.exception(f"Error sending success message for promocode redemption: {e}")
+        except Exception:
             # Try a simple text message as fallback
             try:
                 simple_message = (
@@ -503,5 +424,5 @@ class AramPacks(commands.Cog):
                 )
                 await interaction.response.send_message(simple_message, ephemeral=True)
             except Exception:
-                # If we can't send any message, just log it
-                log.error("Could not send any response message for promocode redemption")
+                # If we can't send any message, global error handler will catch it
+                pass
