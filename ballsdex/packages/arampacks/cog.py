@@ -2,7 +2,7 @@ import asyncio
 import logging
 import random
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import discord
 from discord import app_commands
@@ -24,6 +24,8 @@ from ballsdex.settings import settings
 
 if TYPE_CHECKING:
     from ballsdex.core.bot import BallsDexBot
+else:
+    BallsDexBot = None
 
 log = logging.getLogger("ballsdex.packages.arampacks")
 
@@ -248,7 +250,11 @@ class AramPacks(commands.Cog):
             name=interaction.user.display_name, icon_url=interaction.user.display_avatar.url
         )
 
-        pages = Pages(source=source, interaction=interaction, compact=True)
+        pages = Pages(
+            source=source,
+            interaction=cast("discord.Interaction[BallsDexBot]", interaction),
+            compact=True,
+        )
         await pages.start()
 
     @app_commands.command()
@@ -304,7 +310,11 @@ class AramPacks(commands.Cog):
             name=interaction.user.display_name, icon_url=interaction.user.display_avatar.url
         )
 
-        pages = Pages(source=source, interaction=interaction, compact=True)
+        pages = Pages(
+            source=source,
+            interaction=cast("discord.Interaction[BallsDexBot]", interaction),
+            compact=True,
+        )
         await pages.start()
 
     @app_commands.command(name="promocode_redeem")

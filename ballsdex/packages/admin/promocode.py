@@ -2,7 +2,7 @@ import json
 import logging
 import os
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Literal, Optional
+from typing import TYPE_CHECKING, Literal, Optional, cast
 
 import discord
 from discord import app_commands
@@ -25,7 +25,9 @@ from ballsdex.packages.arampacks.active import (
 from ballsdex.settings import settings
 
 if TYPE_CHECKING:
-    from ballsdex.core.bot import BallsDexBot  # noqa: F401
+    from ballsdex.core.bot import BallsDexBot
+else:
+    BallsDexBot = None
 
 log = logging.getLogger("ballsdex.packages.admin.promocode")
 
@@ -42,11 +44,11 @@ async def ball_autocomplete(
     ball_list = list(balls.values())
     # Try to filter by ball attributes that match the search
     return [
-        app_commands.Choice(name=f"{ball.country} ({ball.id})", value=ball.id)
+        app_commands.Choice(name=f"{ball.country} ({ball.pk})", value=ball.pk)  # type: ignore
         for ball in ball_list
         if current.lower() in ball.country.lower()
-        or (hasattr(ball, "emoji") and current.lower() in str(ball.emoji).lower())
-        or current in str(ball.id)
+        or (hasattr(ball, "emoji_id") and current.lower() in str(ball.emoji_id).lower())
+        or current in str(ball.pk)  # type: ignore
     ][:25]
 
 
@@ -60,9 +62,11 @@ async def special_autocomplete(
 
     special_list = list(specials.values())
     return [
-        app_commands.Choice(name=f"{special.name} ({special.id})", value=special.id)
+        app_commands.Choice(
+            name=f"{special.name} ({special.pk})", value=special.pk  # type: ignore
+        )
         for special in special_list
-        if current.lower() in special.name.lower() or current in str(special.id)
+        if current.lower() in special.name.lower() or current in str(special.pk)  # type: ignore
     ][:25]
 
 
@@ -81,7 +85,10 @@ class Promocode(app_commands.Group):
         """
         Syncs the promocode database with the file, ensuring no data loss.
         """
-        if not interaction.user.guild_permissions.administrator:
+        if (
+            not isinstance(interaction.user, discord.Member)
+            or not interaction.user.guild_permissions.administrator
+        ):
             await interaction.response.send_message(
                 "❌ You don't have permission to use this command.", ephemeral=True
             )
@@ -215,7 +222,10 @@ class Promocode(app_commands.Group):
         description: Optional description for the promocode
         is_hidden: Whether the promocode should be hidden from public listings
         """
-        if not interaction.user.guild_permissions.administrator:
+        if (
+            not isinstance(interaction.user, discord.Member)
+            or not interaction.user.guild_permissions.administrator
+        ):
             await interaction.response.send_message(
                 "❌ You don't have permission to use this command.", ephemeral=True
             )
@@ -368,7 +378,10 @@ class Promocode(app_commands.Group):
         code: The promocode to update
         uses_to_add: Number of uses to add (can be negative to decrease)
         """
-        if not interaction.user.guild_permissions.administrator:
+        if (
+            not isinstance(interaction.user, discord.Member)
+            or not interaction.user.guild_permissions.administrator
+        ):
             await interaction.response.send_message(
                 "❌ You don't have permission to use this command.", ephemeral=True
             )
@@ -444,7 +457,10 @@ class Promocode(app_commands.Group):
         archive: Whether to archive the promocode instead of permanently
                  deleting it (default: True)
         """
-        if not interaction.user.guild_permissions.administrator:
+        if (
+            not isinstance(interaction.user, discord.Member)
+            or not interaction.user.guild_permissions.administrator
+        ):
             await interaction.response.send_message(
                 "❌ You don't have permission to use this command.", ephemeral=True
             )
@@ -563,7 +579,10 @@ class Promocode(app_commands.Group):
         archive: Whether to archive cleaned promocodes instead of permanently
                  deleting them (default: True)
         """
-        if not interaction.user.guild_permissions.administrator:
+        if (
+            not isinstance(interaction.user, discord.Member)
+            or not interaction.user.guild_permissions.administrator
+        ):
             await interaction.response.send_message(
                 "❌ You don't have permission to use this command.", ephemeral=True
             )
@@ -661,7 +680,10 @@ class Promocode(app_commands.Group):
         show_hidden: Whether to show hidden promocodes (default: False)
         sort_by: Field to sort by ("code", "expiry", "uses_left", "created_at") (default: None)
         """
-        if not interaction.user.guild_permissions.administrator:
+        if (
+            not isinstance(interaction.user, discord.Member)
+            or not interaction.user.guild_permissions.administrator
+        ):
             await interaction.response.send_message(
                 "❌ You don't have permission to use this command.", ephemeral=True
             )
@@ -845,7 +867,11 @@ class Promocode(app_commands.Group):
             source.embed.description = (
                 f"Showing promocodes that reward {settings.plural_collectible_name}.{sort_info}"
             )
-            pages = Pages(source=source, interaction=interaction, compact=True)
+            pages = Pages(
+                source=source,
+                interaction=cast("discord.Interaction[BallsDexBot]", interaction),
+                compact=True,
+            )
             await pages.start()
         except Exception as e:
             log.exception(f"Error listing promocodes: {e}")
