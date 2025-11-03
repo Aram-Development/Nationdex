@@ -1,0 +1,8 @@
+{
+  "extraPaths": ["./admin_panel"],
+  "pythonVersion": "3.13",
+  "reportIncompatibleMethodOverride": "none",
+  "reportIncompatibleVariableOverride": "none",
+  "typeCheckingMode": "basic"
+}
+

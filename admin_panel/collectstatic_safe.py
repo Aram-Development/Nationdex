@@ -11,15 +11,15 @@ import sys
 # Set Django settings before importing Django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "admin_panel.settings")
 
-import django
+import django  # noqa: E402
 
 django.setup()
 
-from django.conf import settings
-from django.contrib.staticfiles.management.commands.collectstatic import (
+from django.conf import settings  # noqa: E402
+from django.contrib.staticfiles.management.commands.collectstatic import (  # noqa: E402
     Command as CollectStaticCommand,
 )
-from django.core.management import execute_from_command_line
+from django.core.management import execute_from_command_line  # noqa: E402
 
 # Monkey-patch the delete_file method to handle permission errors gracefully
 original_delete_file = CollectStaticCommand.delete_file

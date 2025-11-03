@@ -25,7 +25,7 @@ from ballsdex.packages.arampacks.active import (
 from ballsdex.settings import settings
 
 if TYPE_CHECKING:
-    from ballsdex.core.bot import BallsDexBot
+    from ballsdex.core.bot import BallsDexBot  # noqa: F401
 
 log = logging.getLogger("ballsdex.packages.admin.promocode")
 

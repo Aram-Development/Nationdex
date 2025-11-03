@@ -268,7 +268,7 @@ def load_promocodes_from_file() -> bool:
     bool
         True if loaded successfully, False otherwise
     """
-    global LAST_LOAD_TIME, LAST_FILE_MTIME, ACTIVE_PROMOCODES
+    global LAST_LOAD_TIME, LAST_FILE_MTIME, ACTIVE_PROMOCODES  # noqa: F824
 
     try:
         # Check if we should reload based on cache expiry
